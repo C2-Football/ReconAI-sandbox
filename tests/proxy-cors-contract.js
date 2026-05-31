@@ -50,7 +50,7 @@ group('shared helper');
 test('shared CORS helper uses an allowlist, not wildcard CORS', () => {
   hasEvery(sharedCors, [
     'APP_ALLOWED_ORIGINS',
-    'https://jcc100218.github.io',
+    'https://c2-football.github.io',
     'https://warroom.skjjcruz.com',
     'export function corsHeaders',
     'export function isAllowedBrowserUrl',

@@ -13,7 +13,7 @@
   const supabaseAnon = existing.supabaseAnon
     || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4c2hpcXl4aGhpZnZ0ZnFhd2JxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTExMzAsImV4cCI6MjA4ODI4NzEzMH0.zJi9W986ZLaANiZN6pt6ReFwaQU6yPeidsERIWo2ibI';
   const functionsBase = existing.functionsBase || `${supabaseUrl}/functions/v1`;
-  const reconAiBase = existing.reconAiBase || 'https://jcc100218.github.io/ReconAI/';
+  const reconAiBase = existing.reconAiBase || 'https://c2-football.github.io/ReconAI/';
   const reconAiSharedBase = existing.reconAiSharedBase || `${reconAiBase}shared/`;
   const defaultSentry = {
     enabled: true,

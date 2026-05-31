@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
 // War Room Scout Automated QA Bot
 // Paste this entire script into the browser console at:
-// https://jcc100218.github.io/ReconAI/
+// https://c2-football.github.io/ReconAI/
 // Wait for DHQ engine to load first (green dots in status bar)
 // ═══════════════════════════════════════════════════════════════
 

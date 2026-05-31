@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
 // SNAPSHOT EXPORTER — paste into browser DevTools console
 // ═══════════════════════════════════════════════════════════════
-// 1. Open https://jcc100218.github.io/ReconAI/ in Chrome
+// 1. Open https://c2-football.github.io/ReconAI/ in Chrome
 // 2. Connect to league, wait for green "DHQ ✓" status
 // 3. Open DevTools (Cmd+Option+J on Mac, F12 on Windows)
 // 4. Paste ALL of this code and press Enter

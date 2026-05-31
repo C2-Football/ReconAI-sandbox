@@ -731,7 +731,7 @@ const YahooProvider = {
       return {
         leagues: [],
         needsAuth: true,
-        authUrl: 'https://jcc100218.github.io/ReconAI/?yahoo_auth=1',
+        authUrl: 'https://c2-football.github.io/ReconAI/?yahoo_auth=1',
         needsFranchisePicker: false,
       };
     }
