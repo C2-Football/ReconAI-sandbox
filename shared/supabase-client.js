@@ -98,8 +98,58 @@ function getAnalyticsUsername() {
     return getSessionToken() && username ? username : null;
 }
 
+// ── Account (app_users) identity ──────────────────────────────
+// Email/password accounts mint a JWT keyed on app_users.id (stored in
+// fw_session_v1.user.id). This is the security principal for direct DB
+// writes; the Sleeper username is non-security "which league" metadata.
+function getCurrentUserId() {
+    try {
+        const raw = localStorage.getItem(FW_SESSION_KEY);
+        if (raw) {
+            const s = JSON.parse(raw);
+            if (s?.user?.id) return s.user.id;
+        }
+    } catch {}
+    return null;
+}
+
+// Which owner columns a row should carry. Account session wins and forces
+// username = null (RLS account policy requires it, to block username spoof).
+// Legacy Sleeper session falls back to username.
+function getOwnerIdentity() {
+    const userId = getCurrentUserId();
+    if (userId) return { userId, username: null };
+    const username = getCurrentUsername();
+    if (username) return { userId: null, username };
+    return { userId: null, username: null };
+}
+
+function hasOwnerIdentity() {
+    const o = getOwnerIdentity();
+    return !!(o.userId || o.username);
+}
+
+// Owner columns to stamp on an insert/upsert row (exactly one is set).
+function ownerCols(owner) {
+    return owner.userId ? { user_id: owner.userId } : { username: owner.username };
+}
+
+// Constrain a select/delete to the current principal's rows.
+function applyOwnerFilter(query, owner) {
+    return owner.userId ? query.eq('user_id', owner.userId) : query.eq('username', owner.username);
+}
+
+// Pick the ON CONFLICT arbiter for an upsert based on principal type.
+function ownerConflict(owner, legacyTarget, accountTarget) {
+    return owner.userId ? accountTarget : legacyTarget;
+}
+
 // ── Ensure user row exists ────────────────────────────────────
+// Legacy-only: the public.users row is keyed on sleeper_username. Account
+// principals live in app_users (FK target for user_id) and must never write
+// a users row, so this is a no-op for account sessions.
 async function ensureUser(username) {
+    if (getCurrentUserId()) return;
     const db = getClient();
     if (!db || !username) return;
     await db.from('users').upsert(
@@ -174,12 +224,12 @@ window.OD.callAI = async function({ type, context }) {
 };
 
 window.OD.saveAIAnalysis = async function(leagueId, type, contextSummary, analysis) {
-    const username = getCurrentUsername();
+    const owner = getOwnerIdentity();
     const db = getClient();
-    if (!db || !isConfigured() || !username) return;
-    await ensureUser(username);
+    if (!db || !isConfigured() || !hasOwnerIdentity()) return;
+    await ensureUser(owner.username);
     const { error } = await db.from('ai_analysis').insert({
-        username, league_id: leagueId, type,
+        ...ownerCols(owner), league_id: leagueId, type,
         context_summary: contextSummary || '',
         analysis,
     });
@@ -187,13 +237,13 @@ window.OD.saveAIAnalysis = async function(leagueId, type, contextSummary, analys
 };
 
 window.OD.loadAIHistory = async function(leagueId) {
-    const username = getCurrentUsername();
+    const owner = getOwnerIdentity();
     const db = getClient();
-    if (!db || !isConfigured() || !username) return [];
-    const { data, error } = await db
-        .from('ai_analysis')
-        .select('id, type, context_summary, analysis, created_at')
-        .eq('username', username)
+    if (!db || !isConfigured() || !hasOwnerIdentity()) return [];
+    const { data, error } = await applyOwnerFilter(
+        db.from('ai_analysis').select('id, type, context_summary, analysis, created_at'),
+        owner
+    )
         .eq('league_id', leagueId)
         .order('created_at', { ascending: false })
         .limit(20);
@@ -439,12 +489,13 @@ window.OD.loadDNA = async function(leagueId) {
         const raw = localStorage.getItem(`od_owner_dna_v1_${leagueId}`);
         if (raw) local = JSON.parse(raw);
     } catch {}
-    const username = getCurrentUsername();
-    if (isConfigured() && username) {
+    const owner = getOwnerIdentity();
+    if (isConfigured() && hasOwnerIdentity()) {
         const db = getClient();
         if (db) {
-            const { data } = await db.from('owner_dna').select('dna_map')
-                .eq('username', username).eq('league_id', leagueId).maybeSingle();
+            const { data } = await applyOwnerFilter(
+                db.from('owner_dna').select('dna_map'), owner
+            ).eq('league_id', leagueId).maybeSingle();
             if (data) {
                 const merged = { ...local, ...(data.dna_map || {}) };
                 localStorage.setItem(`od_owner_dna_v1_${leagueId}`, JSON.stringify(merged));
@@ -457,14 +508,14 @@ window.OD.loadDNA = async function(leagueId) {
 
 window.OD.saveDNA = function(leagueId, dnaMap) {
     localStorage.setItem(`od_owner_dna_v1_${leagueId}`, JSON.stringify(dnaMap));
-    const username = getCurrentUsername();
-    if (isConfigured() && username) {
+    const owner = getOwnerIdentity();
+    if (isConfigured() && hasOwnerIdentity()) {
         const db = getClient();
         if (db) {
-            ensureUser(username).then(() => {
+            ensureUser(owner.username).then(() => {
                 db.from('owner_dna').upsert(
-                    { username, league_id: leagueId, dna_map: dnaMap, updated_at: new Date().toISOString() },
-                    { onConflict: 'username,league_id' }
+                    { ...ownerCols(owner), league_id: leagueId, dna_map: dnaMap, updated_at: new Date().toISOString() },
+                    { onConflict: ownerConflict(owner, 'username,league_id', 'user_id,league_id') }
                 );
             }).catch(console.warn);
         }
@@ -479,6 +530,7 @@ window.OD.getSessionToken = getSessionToken;
 window.OD.getClient = getClient;
 window.OD.isConfigured = isConfigured;
 window.OD.getCurrentUsername = getCurrentUsername;
+window.OD.getCurrentUserId = getCurrentUserId;
 window.OD.SUPABASE_URL = SUPABASE_URL;
 window.OD.SUPABASE_ANON = SUPABASE_ANON;
 window.OD.BACKEND_ENDPOINTS = BACKEND_ENDPOINTS;
@@ -489,7 +541,8 @@ window.OD.status = function() {
     if (!db) return console.log('[FW] Supabase CDN not loaded');
     const token = getSessionToken();
     console.log('[FW] Supabase connected:', SUPABASE_URL);
-    console.log('[FW] Current user:', getCurrentUsername() || '(not logged in)');
+    console.log('[FW] Account user_id:', getCurrentUserId() || '(none)');
+    console.log('[FW] Sleeper username:', getCurrentUsername() || '(none)');
     console.log('[FW] Session token:', token ? 'valid' : 'none — DB writes will be blocked by RLS');
 };
 
@@ -498,24 +551,24 @@ window.OD.status = function() {
 // ══════════════════════════════════════════════════════════════════
 const CALENDAR_LS_KEY = 'od_calendar_events';
 
-async function dbLoadCalendarEvents(username) {
+async function dbLoadCalendarEvents(owner) {
     const db = getClient();
-    if (!db || !isConfigured() || !username) return null;
-    const { data, error } = await db.from('calendar_events').select('*').eq('username', username);
+    if (!db || !isConfigured() || !(owner.userId || owner.username)) return null;
+    const { data, error } = await applyOwnerFilter(db.from('calendar_events').select('*'), owner);
     if (error) { console.warn('[FW] calendar load error', error); return null; }
     return data.map(row => ({ id: row.id, title: row.title, date: row.date, time: row.time, league: row.league, details: row.details }));
 }
 
-async function dbSaveCalendarEvents(username, events) {
+async function dbSaveCalendarEvents(owner, events) {
     const db = getClient();
-    if (!db || !isConfigured() || !username) return;
-    await ensureUser(username);
-    const rows = events.map(e => ({ id: e.id, username, title: e.title, date: e.date, time: e.time || '', league: e.league || '', details: e.details || '' }));
+    if (!db || !isConfigured() || !(owner.userId || owner.username)) return;
+    await ensureUser(owner.username);
+    const rows = events.map(e => ({ id: e.id, ...ownerCols(owner), title: e.title, date: e.date, time: e.time || '', league: e.league || '', details: e.details || '' }));
     if (rows.length > 0) {
         const { error } = await db.from('calendar_events').upsert(rows, { onConflict: 'id' });
         if (error) console.warn('[FW] calendar save error', error);
     }
-    const { data: existing } = await db.from('calendar_events').select('id').eq('username', username);
+    const { data: existing } = await applyOwnerFilter(db.from('calendar_events').select('id'), owner);
     const keepIds = new Set(events.map(e => e.id));
     const toDelete = (existing || []).map(r => r.id).filter(id => !keepIds.has(id));
     if (toDelete.length > 0) await db.from('calendar_events').delete().in('id', toDelete);
@@ -524,9 +577,9 @@ async function dbSaveCalendarEvents(username, events) {
 window.OD.loadCalendarEvents = async function(defaultEvents) {
     let local = null;
     try { const raw = localStorage.getItem(CALENDAR_LS_KEY); if (raw) local = JSON.parse(raw); } catch {}
-    const username = getCurrentUsername();
-    if (isConfigured() && username) {
-        const remote = await dbLoadCalendarEvents(username);
+    const owner = getOwnerIdentity();
+    if (isConfigured() && hasOwnerIdentity()) {
+        const remote = await dbLoadCalendarEvents(owner);
         if (remote !== null) {
             const remoteIds = new Set(remote.map(e => e.id));
             const missingDefaults = (defaultEvents || []).filter(d => !remoteIds.has(d.id));
@@ -547,8 +600,8 @@ window.OD.loadCalendarEvents = async function(defaultEvents) {
 
 window.OD.saveCalendarEvents = function(events) {
     localStorage.setItem(CALENDAR_LS_KEY, JSON.stringify(events));
-    const username = getCurrentUsername();
-    if (isConfigured() && username) dbSaveCalendarEvents(username, events).catch(console.warn);
+    const owner = getOwnerIdentity();
+    if (isConfigured() && hasOwnerIdentity()) dbSaveCalendarEvents(owner, events).catch(console.warn);
 };
 
 // ══════════════════════════════════════════════════════════════════
@@ -556,24 +609,24 @@ window.OD.saveCalendarEvents = function(events) {
 // ══════════════════════════════════════════════════════════════════
 const EARNINGS_LS_KEY = 'od_earnings_entries';
 
-async function dbLoadEarnings(username) {
+async function dbLoadEarnings(owner) {
     const db = getClient();
-    if (!db || !isConfigured() || !username) return null;
-    const { data, error } = await db.from('earnings').select('*').eq('username', username);
+    if (!db || !isConfigured() || !(owner.userId || owner.username)) return null;
+    const { data, error } = await applyOwnerFilter(db.from('earnings').select('*'), owner);
     if (error) { console.warn('[FW] earnings load error', error); return null; }
     return data.map(row => ({ id: row.id, year: row.year, league: row.league, description: row.description, amount: row.amount }));
 }
 
-async function dbSaveEarnings(username, entries) {
+async function dbSaveEarnings(owner, entries) {
     const db = getClient();
-    if (!db || !isConfigured() || !username) return;
-    await ensureUser(username);
+    if (!db || !isConfigured() || !(owner.userId || owner.username)) return;
+    await ensureUser(owner.username);
     if (entries.length > 0) {
-        const rows = entries.map(e => ({ id: e.id, username, year: e.year, league: e.league || '', description: e.description || '', amount: e.amount }));
+        const rows = entries.map(e => ({ id: e.id, ...ownerCols(owner), year: e.year, league: e.league || '', description: e.description || '', amount: e.amount }));
         const { error } = await db.from('earnings').upsert(rows, { onConflict: 'id' });
         if (error) console.warn('[FW] earnings save error', error);
     }
-    const { data: existing } = await db.from('earnings').select('id').eq('username', username);
+    const { data: existing } = await applyOwnerFilter(db.from('earnings').select('id'), owner);
     const keepIds = new Set(entries.map(e => e.id));
     const toDelete = (existing || []).map(r => r.id).filter(id => !keepIds.has(id));
     if (toDelete.length > 0) await db.from('earnings').delete().in('id', toDelete);
@@ -582,9 +635,9 @@ async function dbSaveEarnings(username, entries) {
 window.OD.loadEarnings = async function() {
     let local = null;
     try { const raw = localStorage.getItem(EARNINGS_LS_KEY); if (raw) local = JSON.parse(raw); } catch {}
-    const username = getCurrentUsername();
-    if (isConfigured() && username) {
-        const remote = await dbLoadEarnings(username);
+    const owner = getOwnerIdentity();
+    if (isConfigured() && hasOwnerIdentity()) {
+        const remote = await dbLoadEarnings(owner);
         if (remote !== null) { localStorage.setItem(EARNINGS_LS_KEY, JSON.stringify(remote)); return remote; }
     }
     return local || [];
@@ -592,8 +645,8 @@ window.OD.loadEarnings = async function() {
 
 window.OD.saveEarnings = function(entries) {
     localStorage.setItem(EARNINGS_LS_KEY, JSON.stringify(entries));
-    const username = getCurrentUsername();
-    if (isConfigured() && username) dbSaveEarnings(username, entries).catch(console.warn);
+    const owner = getOwnerIdentity();
+    if (isConfigured() && hasOwnerIdentity()) dbSaveEarnings(owner, entries).catch(console.warn);
 };
 
 // ══════════════════════════════════════════════════════════════════
@@ -601,22 +654,23 @@ window.OD.saveEarnings = function(entries) {
 // ══════════════════════════════════════════════════════════════════
 const FA_LS_KEY = id => `od_fa_targets_v1_${id}`;
 
-async function dbLoadTargets(username, leagueId) {
+async function dbLoadTargets(owner, leagueId) {
     const db = getClient();
-    if (!db || !isConfigured() || !username) return null;
-    const { data, error } = await db.from('fa_targets').select('*').eq('username', username).eq('league_id', leagueId).maybeSingle();
+    if (!db || !isConfigured() || !(owner.userId || owner.username)) return null;
+    const { data, error } = await applyOwnerFilter(db.from('fa_targets').select('*'), owner)
+        .eq('league_id', leagueId).maybeSingle();
     if (error) { console.warn('[FW] fa load error', error); return null; }
     if (!data) return null;
     return { startingBudget: data.starting_budget, targets: data.targets || [] };
 }
 
-async function dbSaveTargets(username, leagueId, faData) {
+async function dbSaveTargets(owner, leagueId, faData) {
     const db = getClient();
-    if (!db || !isConfigured() || !username) return;
-    await ensureUser(username);
+    if (!db || !isConfigured() || !(owner.userId || owner.username)) return;
+    await ensureUser(owner.username);
     const { error } = await db.from('fa_targets').upsert(
-        { username, league_id: leagueId, starting_budget: faData.startingBudget, targets: faData.targets, updated_at: new Date().toISOString() },
-        { onConflict: 'username,league_id' }
+        { ...ownerCols(owner), league_id: leagueId, starting_budget: faData.startingBudget, targets: faData.targets, updated_at: new Date().toISOString() },
+        { onConflict: ownerConflict(owner, 'username,league_id', 'user_id,league_id') }
     );
     if (error) console.warn('[FW] fa save error', error);
 }
@@ -624,8 +678,8 @@ async function dbSaveTargets(username, leagueId, faData) {
 window.OD.loadTargets = async function(leagueId) {
     let local = null;
     try { const raw = localStorage.getItem(FA_LS_KEY(leagueId)); if (raw) local = JSON.parse(raw); } catch {}
-    const username = getCurrentUsername();
-    if (isConfigured() && username) { const remote = await dbLoadTargets(username, leagueId); if (remote !== null) return remote; }
+    const owner = getOwnerIdentity();
+    if (isConfigured() && hasOwnerIdentity()) { const remote = await dbLoadTargets(owner, leagueId); if (remote !== null) return remote; }
     return local || { startingBudget: 1000, targets: [] };
 };
 
@@ -643,8 +697,8 @@ window.OD.saveTargets = function(leagueId, data) {
             });
         });
     } catch (_err) {}
-    const username = getCurrentUsername();
-    if (isConfigured() && username) dbSaveTargets(username, leagueId, data).catch(console.warn);
+    const owner = getOwnerIdentity();
+    if (isConfigured() && hasOwnerIdentity()) dbSaveTargets(owner, leagueId, data).catch(console.warn);
 };
 
 // ══════════════════════════════════════════════════════════════════
@@ -755,17 +809,17 @@ window.OD.savePlayerTags = async function(leagueId, tags) {
     try { localStorage.setItem(TAGS_LS_KEY(leagueId), JSON.stringify(tags)); } catch {}
 
     // Then sync to Supabase (async, non-blocking)
-    const username = getCurrentUsername();
+    const owner = getOwnerIdentity();
     const db = getClient();
-    if (!db || !isConfigured() || !username) return;
+    if (!db || !isConfigured() || !hasOwnerIdentity()) return;
     try {
-        await ensureUser(username);
+        await ensureUser(owner.username);
         const { error } = await db.from('player_tags').upsert({
-            username,
+            ...ownerCols(owner),
             league_id: leagueId,
             tags: tags, // JSON object: { "pid": "trade"|"cut"|"untouchable"|"watch" }
             updated_at: new Date().toISOString(),
-        }, { onConflict: 'username,league_id' });
+        }, { onConflict: ownerConflict(owner, 'username,league_id', 'user_id,league_id') });
         if (error) console.warn('[FW] player_tags save error', error);
     } catch (e) { console.warn('[FW] player_tags save failed:', e); }
 };
@@ -779,14 +833,13 @@ window.OD.loadPlayerTags = async function(leagueId) {
     } catch {}
 
     // Try Supabase (may have newer data from the other app)
-    const username = getCurrentUsername();
+    const owner = getOwnerIdentity();
     const db = getClient();
-    if (db && isConfigured() && username) {
+    if (db && isConfigured() && hasOwnerIdentity()) {
         try {
-            const { data, error } = await db
-                .from('player_tags')
-                .select('tags, updated_at')
-                .eq('username', username)
+            const { data, error } = await applyOwnerFilter(
+                db.from('player_tags').select('tags, updated_at'), owner
+            )
                 .eq('league_id', leagueId)
                 .maybeSingle();
             if (!error && data?.tags) {
@@ -830,7 +883,7 @@ let _fieldLogDbDisabled = false;
 window.OD.saveFieldLogEntry = async function(entry) {
     if (_fieldLogDbDisabled) return false;
 
-    const username = getCurrentUsername();
+    const owner = getOwnerIdentity();
     const db = getClient();
 
     function updateLocalSyncStatus(status) {
@@ -842,15 +895,15 @@ window.OD.saveFieldLogEntry = async function(entry) {
         } catch {}
     }
 
-    if (!db || !isConfigured() || !username) {
+    if (!db || !isConfigured() || !hasOwnerIdentity()) {
         updateLocalSyncStatus('pending');
         return false;
     }
     try {
-        await ensureUser(username);
+        await ensureUser(owner.username);
         const { error } = await db.from('field_log').upsert({
             client_id: entry.id,
-            username,
+            ...ownerCols(owner),
             league_id: entry.leagueId || null,
             ts: entry.ts,
             category: entry.category || 'note',
@@ -899,13 +952,15 @@ window.OD.syncPendingFieldLog = async function() {
 // Load field log entries from Supabase (used by War Room)
 window.OD.loadFieldLog = async function(leagueId, limit) {
     limit = limit || 50;
-    const username = getCurrentUsername();
+    const owner = getOwnerIdentity();
     const db = getClient();
-    if (!db || !isConfigured() || !username) return null;
+    if (!db || !isConfigured() || !hasOwnerIdentity()) return null;
     try {
-        let query = db.from('field_log')
-            .select('id, client_id, league_id, ts, category, action_type, players, context, icon, text, source, created_at')
-            .eq('username', username)
+        let query = applyOwnerFilter(
+            db.from('field_log')
+                .select('id, client_id, league_id, ts, category, action_type, players, context, icon, text, source, created_at'),
+            owner
+        )
             .order('ts', { ascending: false })
             .limit(limit);
         if (leagueId) query = query.eq('league_id', leagueId);
@@ -951,13 +1006,13 @@ let _chatMemoryDbDisabled = false;
 // do not interrupt the in-memory / localStorage path in ai-chat.js.
 window.OD.saveChatMemory = async function(entry) {
     if (_chatMemoryDbDisabled) return false;
-    const username = getCurrentUsername();
+    const owner = getOwnerIdentity();
     const db = getClient();
-    if (!db || !isConfigured() || !username || !entry?.summary) return false;
+    if (!db || !isConfigured() || !hasOwnerIdentity() || !entry?.summary) return false;
     try {
-        await ensureUser(username);
+        await ensureUser(owner.username);
         const { error } = await db.from('ai_chat_memory').insert({
-            username,
+            ...ownerCols(owner),
             league_id: entry.leagueId || null,
             ts: entry.ts || Date.now(),
             session_label: entry.sessionLabel || null,
@@ -981,13 +1036,15 @@ window.OD.saveChatMemory = async function(entry) {
 window.OD.loadChatMemory = async function(leagueId, limit) {
     if (_chatMemoryDbDisabled) return null;
     limit = limit || 6;
-    const username = getCurrentUsername();
+    const owner = getOwnerIdentity();
     const db = getClient();
-    if (!db || !isConfigured() || !username) return null;
+    if (!db || !isConfigured() || !hasOwnerIdentity()) return null;
     try {
-        let query = db.from('ai_chat_memory')
-            .select('id, league_id, ts, session_label, summary, source, created_at')
-            .eq('username', username)
+        let query = applyOwnerFilter(
+            db.from('ai_chat_memory')
+                .select('id, league_id, ts, session_label, summary, source, created_at'),
+            owner
+        )
             .order('ts', { ascending: false })
             .limit(limit);
         if (leagueId) query = query.eq('league_id', leagueId);
@@ -1035,23 +1092,23 @@ let _strategyDbDisabled = false;
 // Upsert the user's strategy row. Non-blocking — callers fire and forget.
 window.OD.saveStrategy = async function(strategy) {
     if (_strategyDbDisabled) return false;
-    const username = getCurrentUsername();
+    const owner    = getOwnerIdentity();
     const token    = getSessionToken();
     const db = getClient();
-    if (!db || !isConfigured() || !username || !strategy) return false;
-    // RLS on gm_strategy requires a JWT whose `sub` claim matches the
-    // username. Without a session token we'd hit the anon client and get
+    if (!db || !isConfigured() || !hasOwnerIdentity() || !strategy) return false;
+    // RLS on gm_strategy authorizes by user_id (account) or username
+    // (legacy). Without a session token we'd hit the anon client and get
     // 401 every time — skip silently and let localStorage stay authoritative.
     if (!token) return false;
     try {
-        await ensureUser(username);
+        await ensureUser(owner.username);
         const { error } = await db.from('gm_strategy').upsert({
-            username,
+            ...ownerCols(owner),
             strategy,
             version: strategy.version || 1,
             last_synced_at: strategy.lastSyncedAt || Date.now(),
             last_synced_from: strategy.lastSyncedFrom || 'scout',
-        }, { onConflict: 'username' });
+        }, { onConflict: ownerConflict(owner, 'username', 'user_id') });
         if (error) {
             if (error.code === '42501' || error.message?.includes('row-level security') || error.code === '401') {
                 _strategyDbDisabled = true;
@@ -1068,17 +1125,19 @@ window.OD.saveStrategy = async function(strategy) {
 // Load the user's strategy row. Returns null if no row exists yet.
 window.OD.loadStrategy = async function() {
     if (_strategyDbDisabled) return null;
-    const username = getCurrentUsername();
+    const owner    = getOwnerIdentity();
     const token    = getSessionToken();
     const db = getClient();
-    if (!db || !isConfigured() || !username) return null;
+    if (!db || !isConfigured() || !hasOwnerIdentity()) return null;
     // Same RLS requirement as saveStrategy — quietly return null for anon
     // users instead of hitting the server and flipping the kill switch.
     if (!token) return null;
     try {
-        const { data, error } = await db.from('gm_strategy')
-            .select('strategy, version, last_synced_at, last_synced_from, updated_at')
-            .eq('username', username)
+        const { data, error } = await applyOwnerFilter(
+            db.from('gm_strategy')
+                .select('strategy, version, last_synced_at, last_synced_from, updated_at'),
+            owner
+        )
             .maybeSingle();
         if (error) {
             console.warn('[FW] gm_strategy load error:', error.message || error.code || JSON.stringify(error));
@@ -1115,11 +1174,11 @@ window.OD.loadStrategy = async function() {
  * @param {string} category - 'bylaws'|'awards'|'calendar'|'scoring'|'general'
  */
 window.OD.uploadLeagueDoc = async function(leagueId, docName, text, category) {
-    const username = getCurrentUsername();
+    const owner = getOwnerIdentity();
     const db = getClient();
-    if (!db || !isConfigured() || !username) return false;
+    if (!db || !isConfigured() || !hasOwnerIdentity()) return false;
     try {
-        await ensureUser(username);
+        await ensureUser(owner.username);
         // Chunk text into ~500 token (~2000 char) segments
         const CHUNK_SIZE = 2000;
         const chunks = [];
@@ -1127,10 +1186,10 @@ window.OD.uploadLeagueDoc = async function(leagueId, docName, text, category) {
             chunks.push(text.slice(i, i + CHUNK_SIZE));
         }
         // Delete existing chunks for this doc
-        await db.from('league_docs').delete().match({ username, league_id: leagueId, doc_name: docName });
+        await db.from('league_docs').delete().match({ ...ownerCols(owner), league_id: leagueId, doc_name: docName });
         // Insert new chunks
         const rows = chunks.map((chunk, idx) => ({
-            username, league_id: leagueId, doc_name: docName,
+            ...ownerCols(owner), league_id: leagueId, doc_name: docName,
             doc_type: 'text', chunk_idx: idx, chunk_text: chunk,
             category: category || 'general',
         }));
@@ -1145,9 +1204,8 @@ window.OD.uploadLeagueDoc = async function(leagueId, docName, text, category) {
  * Returns concatenated text suitable for AI context injection.
  */
 window.OD.getLeagueDocsContext = async function(leagueId, category) {
-    const username = getCurrentUsername();
     const db = getClient();
-    if (!db || !isConfigured() || !username) return '';
+    if (!db || !isConfigured() || !hasOwnerIdentity()) return '';
     try {
         let query = db.from('league_docs')
             .select('doc_name, chunk_idx, chunk_text, category')
@@ -1172,9 +1230,8 @@ window.OD.getLeagueDocsContext = async function(leagueId, category) {
  * List all uploaded docs for a league (name + category, no content).
  */
 window.OD.listLeagueDocs = async function(leagueId) {
-    const username = getCurrentUsername();
     const db = getClient();
-    if (!db || !isConfigured() || !username) return [];
+    if (!db || !isConfigured() || !hasOwnerIdentity()) return [];
     try {
         const { data, error } = await db.from('league_docs')
             .select('doc_name, category, created_at')
@@ -1190,11 +1247,11 @@ window.OD.listLeagueDocs = async function(leagueId) {
  * Delete all chunks for a specific doc.
  */
 window.OD.deleteLeagueDoc = async function(leagueId, docName) {
-    const username = getCurrentUsername();
+    const owner = getOwnerIdentity();
     const db = getClient();
-    if (!db || !isConfigured() || !username) return false;
+    if (!db || !isConfigured() || !hasOwnerIdentity()) return false;
     try {
-        const { error } = await db.from('league_docs').delete().match({ username, league_id: leagueId, doc_name: docName });
+        const { error } = await db.from('league_docs').delete().match({ ...ownerCols(owner), league_id: leagueId, doc_name: docName });
         return !error;
     } catch { return false; }
 };
@@ -1349,6 +1406,7 @@ window.OD.track = function(eventName, payload = {}) {
         const event = {
             event_id: 'evt_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10),
             username: getAnalyticsUsername(),
+            user_id: getCurrentUserId(),
             league_id: payload.leagueId || payload.league_id || window.S?.currentLeagueId || null,
             session_id: analyticsSessionId(),
             platform: inferPlatform(payload),
