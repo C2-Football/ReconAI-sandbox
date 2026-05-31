@@ -26,15 +26,52 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build Pages artifact
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Produce the optimized production bundle (minified + hashed JS chunks,
+      # minified CSS, modulepreload graph) instead of shipping raw ES-module
+      # source. This cuts the initial-load JS from ~1.79MB across 47 module
+      # requests down to ~1.05MB across ~6 hashed chunks, and minifies the
+      # 191KB stylesheet.
+      - name: Build production bundle (Vite)
+        run: npm run build
+
+      - name: Assemble Pages artifact
         run: |
           set -euo pipefail
           mkdir -p pages-artifact
-          cp -R \
-            index.html landing-editor.html main.js sw.js manifest.json \
-            js css shared icons public \
-            *.js *.json *.webmanifest *.css *.png *.ico *.svg \
-            pages-artifact/ 2>/dev/null || true
+
+          # 1. The built app: index.html + hashed assets/* + content/*
+          cp -R dist/. pages-artifact/
+
+          # 2. Service worker — registered at runtime as ./sw.js (=> /ReconAI/sw.js).
+          #    Vite does not bundle it, so copy it to the artifact root.
+          cp sw.js pages-artifact/sw.js
+
+          # 3. PWA icons. Vite does not follow web-manifest icon references, so the
+          #    built manifest still points at "icons/*.png". Overlay icons/ at both
+          #    paths that get requested at runtime:
+          #      - /ReconAI/icons/*         (runtime refs, e.g. notification icon in js/app.js)
+          #      - /ReconAI/assets/icons/*  (resolves the built manifest's relative icon src)
+          cp -R icons pages-artifact/icons
+          mkdir -p pages-artifact/assets/icons
+          cp -R icons/. pages-artifact/assets/icons/
+
+          # 4. Paths consumed cross-origin by the War Room deploy on the same
+          #    github.io host — these must stay live:
+          #      /ReconAI/js/pro-launch.js  (WarRoom index.html)
+          #      /ReconAI/shared/*.js       (WarRoom js/shared/shared-loader.js)
+          mkdir -p pages-artifact/js
+          cp js/pro-launch.js pages-artifact/js/pro-launch.js
+          cp -R shared pages-artifact/shared
+
           touch pages-artifact/.nojekyll
 
       - name: Setup Pages
