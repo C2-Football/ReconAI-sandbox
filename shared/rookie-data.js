@@ -4,7 +4,7 @@
 (function() {
   window.App = window.App || {};
 
-  const DEFAULT_DATA_BASE = 'https://cdn.jsdelivr.net/gh/jcc100218/warroom@main/draft-war-room';
+  const DEFAULT_DATA_BASE = 'https://cdn.jsdelivr.net/gh/C2-Football/WarRoom@main/draft-war-room';
   const POS_MAP = {
     ED: 'DL', EDGE: 'DL', DE: 'DL', DT: 'DL', IDL: 'DL', NT: 'DL',
     ILB: 'LB', OLB: 'LB', MLB: 'LB',
