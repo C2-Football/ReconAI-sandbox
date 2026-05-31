@@ -7,6 +7,10 @@
 
 window.App = window.App || {};
 
+// Seeded phrase variation (no-op fallback to first variant when AlexVoice
+// isn't loaded — e.g. inside ReconAI, which doesn't ship the voice helper).
+const _fwPick = (seed, arr) => (window.AlexVoice ? window.AlexVoice.pick(seed, arr) : arr[0]);
+
 // ── Career stats cache ──────────────────────────────────────────
 const _fwCareerCache = {};
 
@@ -402,56 +406,100 @@ function openFWPlayerModal(playerIdOrObj, playersData, statsData, scoringSetting
     const yrsPast = Math.max(0, age - pk.hi);
     const yrsExp = exp;
     let blurb = '', blurbCol = _wr.amber;
+    const _sd = 'pm:' + (pid || name) + ':' + pos;
 
     if (meta.source === 'FC_ROOKIE') {
-      blurb = `Incoming rookie with ${peakYrsLeft||'?'} peak years ahead. Value based on DHQ dynasty consensus.`;
+      blurb = _fwPick(_sd, [
+        `Incoming rookie with ${peakYrsLeft||'?'} peak years ahead. Value's off DHQ dynasty consensus for now.`,
+        `Rookie \u2014 ${peakYrsLeft||'?'} peak years of runway, and the value's anchored to DHQ consensus until he plays.`,
+      ]);
       blurbCol = _wr.green;
     } else if (meta.statusReason) {
       const roleNote = meta.roleLabel ? ` ${meta.roleLabel}.` : '';
-      blurb = `${meta.statusReason}.${roleNote} DHQ is capping the profile until the NFL role changes.`;
+      blurb = _fwPick(_sd, [
+        `${meta.statusReason}.${roleNote} DHQ's holding the profile down until the NFL role changes.`,
+        `${meta.statusReason}.${roleNote} The value won't move until his role does.`,
+      ]);
       blurbCol = meta.statusCode === 'active' ? _wr.amber : _wr.red;
     } else if (meta.roleLabel && meta.roleMult < 0.9) {
-      blurb = `${meta.roleLabel} on the NFL depth chart. DHQ is discounting the role until playing-time confidence improves.`;
+      blurb = _fwPick(_sd, [
+        `${meta.roleLabel} on the depth chart \u2014 DHQ's discounting him until the playing time firms up.`,
+        `${meta.roleLabel} right now, so the value's docked until he earns more snaps.`,
+      ]);
       blurbCol = _wr.amber;
     } else if (meta.opportunityLabel && meta.opportunityMult < 1) {
-      blurb = `${meta.opportunityLabel}. DHQ is applying a softer opportunity discount, not a hard ceiling.`;
+      blurb = _fwPick(_sd, [
+        `${meta.opportunityLabel}. That's a softer opportunity discount, not a hard ceiling.`,
+        `${meta.opportunityLabel} \u2014 DHQ trims for it, but it's not capping his upside.`,
+      ]);
       blurbCol = _wr.amber;
 	    } else if (meta.sitMult <= 0.35 && (!team || team === 'FA')) {
-	      blurb = `Not rostered by anyone in the league and no NFL team. ${yrsPast>=2?'Likely retired or out of football.':'Needs a landing spot.'}`;
+	      blurb = _fwPick(_sd, [
+	        `Nobody in the league rosters him and he's got no NFL team. ${yrsPast>=2?'Probably done.':'Needs a landing spot first.'}`,
+	        `No league roster, no NFL team. ${yrsPast>=2?'Looks retired or out of the league.':'He needs somewhere to land.'}`,
+	      ]);
 	      blurbCol = _wr.red;
 	    } else if (age <= pk.declineHi && yrsPast > 0) {
-	      blurb = `Past elite ${pos} peak, but still inside the valuable veteran band. ${pk.desc}.`;
+	      blurb = _fwPick(_sd, [
+	        `A touch past elite ${pos} peak, but still in the valuable veteran band. ${pk.desc}.`,
+	        `Just past his ${pos} prime, though he's hanging in the useful veteran range. ${pk.desc}.`,
+	      ]);
 	      blurbCol = _wr.amber;
 	    } else if (yrsPast >= 5) {
-      const extra = gamesPlayed <= 12 && gamesPlayed > 0 ? ` Only played ${gamesPlayed} games last year.` : '';
+      const extra = gamesPlayed <= 12 && gamesPlayed > 0 ? ` Only ${gamesPlayed} games last year.` : '';
       const trendNote = trend <= -15 ? ` Production down ${Math.abs(trend)}%.` : '';
-      blurb = `${yrsExp>8?yrsExp+'-year veteran, ':''}${yrsPast} years past ${pos} prime at age ${age}. On borrowed time \u2014 sell if anyone's buying.${extra}${trendNote}`;
+      const vet = yrsExp>8?yrsExp+'-year vet, ':'';
+      blurb = _fwPick(_sd, [
+        `${vet}${yrsPast} years past ${pos} prime at ${age}. On borrowed time \u2014 sell if anyone's buying.${extra}${trendNote}`,
+        `${vet}${yrsPast} years past peak at ${age}. I'd be shopping him while there's still a market.${extra}${trendNote}`,
+      ]);
       blurbCol = _wr.red;
     } else if (yrsPast >= 2) {
       const trendNote = trend <= -20 ? ` PPG dropped ${Math.abs(trend)}% last season.` : trend >= 15 ? ` Still trending up ${trend}% \u2014 defying age.` : '';
       const gpNote = gamesPlayed <= 12 && gamesPlayed > 0 ? ` Durability concern \u2014 only ${gamesPlayed} games.` : '';
-      blurb = `${yrsPast} years past ${pos} peak at age ${age}. ${meta.starterSeasons>=4?'Proven producer but ':''}Dynasty value declining.${trendNote}${gpNote}`;
+      const proven = meta.starterSeasons>=4?'Proven producer, but ':'';
+      blurb = _fwPick(_sd, [
+        `${yrsPast} years past ${pos} peak at ${age}. ${proven}the dynasty value's sliding.${trendNote}${gpNote}`,
+        `At ${age}, he's ${yrsPast} years past ${pos} peak \u2014 ${proven}value's on the way down.${trendNote}${gpNote}`,
+      ]);
       blurbCol = _wr.red;
     } else if (yrsPast === 1) {
-      const trendNote = trend <= -20 ? ` PPG fell ${Math.abs(trend)}% \u2014 the decline may be starting.` : trend >= 15 ? ` Still improving (+${trend}%) \u2014 could have more in the tank.` : ' Watch closely this season.';
-      blurb = `Just exited ${pos} peak window at age ${age}.${trendNote}`;
+      const trendNote = trend <= -20 ? ` PPG fell ${Math.abs(trend)}% \u2014 the slide may be starting.` : trend >= 15 ? ` Still improving (+${trend}%) \u2014 could have more in the tank.` : ' Worth watching closely this year.';
+      blurb = _fwPick(_sd, [
+        `Just stepped out of his ${pos} peak window at ${age}.${trendNote}`,
+        `One year removed from ${pos} peak at ${age}.${trendNote}`,
+      ]);
       blurbCol = _wr.amber;
     } else if (age <= pk.lo && peakYrsLeft >= 5) {
-      const prodNote = meta.starterSeasons >= 2 ? ` Already a ${meta.starterSeasons}-year starter at just ${age} \u2014 rare.` : meta.starterSeasons === 1 ? ' Showed starter-level production in year one.' : ' Still developing.';
+      const prodNote = meta.starterSeasons >= 2 ? ` Already a ${meta.starterSeasons}-year starter at just ${age} \u2014 that's rare.` : meta.starterSeasons === 1 ? ' Flashed starter production in year one.' : ' Still developing.';
       const trendNote = trend >= 20 ? ` PPG up ${trend}% \u2014 breakout trajectory.` : '';
-      blurb = `${peakYrsLeft} peak years ahead at age ${age}.${prodNote}${trendNote} Dynasty stock rising.`;
+      blurb = _fwPick(_sd, [
+        `${peakYrsLeft} peak years ahead at ${age}.${prodNote}${trendNote} Stock's rising.`,
+        `Loads of runway \u2014 ${peakYrsLeft} peak years left at ${age}.${prodNote}${trendNote} This is the arrow-up profile.`,
+      ]);
       blurbCol = _wr.green;
     } else if (peakYrsLeft >= 3) {
       const eliteNote = meta.sitMult >= 1.30 && age <= 25 ? ' Elite young producer \u2014 exactly what dynasty is about.' : '';
       const trendNote = trend >= 20 ? ` PPG up ${trend}% year-over-year.` : '';
-      blurb = `In prime with ${peakYrsLeft} peak years left. ${meta.starterSeasons>=3?meta.starterSeasons+'-year proven starter. ':''}${eliteNote}${trendNote}`;
+      const proven = meta.starterSeasons>=3?meta.starterSeasons+'-year proven starter. ':'';
+      blurb = _fwPick(_sd, [
+        `Right in his prime with ${peakYrsLeft} peak years left. ${proven}${eliteNote}${trendNote}`,
+        `Squarely in the window \u2014 ${peakYrsLeft} peak years to go. ${proven}${eliteNote}${trendNote}`,
+      ]);
       blurbCol = _wr.green;
     } else if (peakYrsLeft >= 1) {
       const trendNote = trend <= -20 ? ` Production declining (${trend}%).` : '';
-      blurb = `${peakYrsLeft} peak year${peakYrsLeft>1?'s':''} left at age ${age}. Window closing${meta.starterSeasons>=3?' but still a reliable starter':''}.${trendNote}`;
+      const stillReliable = meta.starterSeasons>=3?' but still a reliable starter':'';
+      blurb = _fwPick(_sd, [
+        `${peakYrsLeft} peak year${peakYrsLeft>1?'s':''} left at ${age}. Window's closing${stillReliable}.${trendNote}`,
+        `Getting late \u2014 ${peakYrsLeft} peak year${peakYrsLeft>1?'s':''} left at ${age}${stillReliable}.${trendNote}`,
+      ]);
       blurbCol = _wr.amber;
     } else {
-      blurb = `At the edge of ${pos} peak at age ${age}. Value peaks now \u2014 it only goes down from here.`;
+      blurb = _fwPick(_sd, [
+        `Right at the edge of ${pos} peak at ${age}. Value tops out now \u2014 it only goes down from here.`,
+        `He's at the ${pos} peak cliff at ${age}. This is about as high as the value gets.`,
+      ]);
       blurbCol = _wr.amber;
     }
 
