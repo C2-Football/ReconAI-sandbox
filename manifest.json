@@ -1,0 +1,37 @@
+{
+  "name": "Dynasty HQ Scout",
+  "short_name": "Scout",
+  "id": "./index.html",
+  "lang": "en-US",
+  "description": "Dynasty fantasy football intelligence — DHQ valuations, AI advisor, trade finder, waiver wire, draft scouting",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#08090b",
+  "theme_color": "#08090b",
+  "prefer_related_applications": false,
+  "categories": ["sports", "entertainment"],
+  "screenshots": [],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

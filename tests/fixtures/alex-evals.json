@@ -1,0 +1,65 @@
+{
+  "version": "2026-04-26",
+  "cases": [
+    {
+      "id": "quick-team-brief",
+      "platform": "warroom",
+      "callType": "home-chat",
+      "expectedProvider": "gemini",
+      "expectedModel": "GEMINI_FAST",
+      "expectedTier": "fast",
+      "maxCostTier": "fast",
+      "prompt": "Give me the most important dynasty angle on my team today.",
+      "requiredContext": ["leagueId", "roster", "topPlayers", "teamNeeds"],
+      "forbidden": ["invented roster facts", "generic advice without player names"]
+    },
+    {
+      "id": "waiver-priority",
+      "platform": "reconai",
+      "callType": "waiver-agent",
+      "expectedProvider": "gemini",
+      "expectedModel": "GEMINI_BALANCED",
+      "expectedTier": "standard",
+      "maxCostTier": "standard",
+      "prompt": "Who are my top waiver targets and what should I bid?",
+      "requiredContext": ["availablePlayers", "faabBudget", "teamNeeds", "leagueScoring"],
+      "forbidden": ["raw bid without budget context", "recommending rostered players"]
+    },
+    {
+      "id": "trade-message",
+      "platform": "warroom",
+      "callType": "trade-chat",
+      "expectedProvider": "anthropic",
+      "expectedModel": "CLAUDE_REASONING",
+      "expectedTier": "premium",
+      "maxCostTier": "premium",
+      "prompt": "Analyze this trade and draft a Sleeper-ready message.",
+      "requiredContext": ["myAssets", "theirAssets", "ownerDNA", "dhqValues"],
+      "forbidden": ["missing DHQ totals", "ignoring owner psychology"]
+    },
+    {
+      "id": "rookie-qb-order",
+      "platform": "warroom",
+      "callType": "draft-chat",
+      "expectedProvider": "gemini",
+      "expectedModel": "GEMINI_BALANCED",
+      "expectedTier": "standard",
+      "maxCostTier": "standard",
+      "prompt": "Explain Fernando Mendoza vs Ty Simpson in this rookie board.",
+      "requiredContext": ["rookieRank", "draftCapital", "positionRank", "leagueFormat"],
+      "forbidden": ["ranking without market context", "ignoring superflex"]
+    },
+    {
+      "id": "player-scout",
+      "platform": "reconai",
+      "callType": "player-scout",
+      "expectedProvider": "anthropic",
+      "expectedModel": "CLAUDE_REASONING",
+      "expectedTier": "premium",
+      "maxCostTier": "premium",
+      "prompt": "Give me a full dynasty scouting report on a player.",
+      "requiredContext": ["playerMeta", "depthChart", "ppg", "ageCurve", "dhqValue"],
+      "forbidden": ["no depth chart", "no buy/sell/hold recommendation"]
+    }
+  ]
+}

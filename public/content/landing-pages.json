@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "pages": {
+    "scoutFrontDoor": {
+      "_editor": {
+        "label": "Scout Front Door",
+        "previewPath": "index.html"
+      },
+      "meta": {
+        "title": "Dynasty HQ Scout"
+      },
+      "auth": {
+        "welcomeTitle": "Welcome to Scout",
+        "subtitle": "Dynasty intelligence, powered by AI",
+        "googleCta": "Sign in with Google",
+        "appleCta": "Sign in with Apple",
+        "divider": "- or -",
+        "guestCta": "Continue as guest"
+      },
+      "connect": {
+        "heading": "Connect your leagues",
+        "subtitle": "Instant lineup, waiver, trade, and draft intelligence",
+        "sleeperTab": "Sleeper",
+        "espnTab": "ESPN",
+        "mflTab": "MFL",
+        "yahooTab": "Yahoo",
+        "sleeperPlaceholder": "Sleeper username",
+        "sleeperCta": "Connect my league",
+        "espnPlaceholder": "ESPN League ID",
+        "espnPrivateSummary": "Private league? Add cookies",
+        "espnPrivateHelp": "Find these in your browser: open ESPN Fantasy, press F12, Application, Cookies, fantasy.espn.com",
+        "espnS2Placeholder": "espn_s2 cookie value",
+        "espnSwidPlaceholder": "SWID cookie value  {XXXXXXXX-...}",
+        "espnCta": "Connect ESPN League",
+        "mflLeaguePlaceholder": "MFL League ID",
+        "mflYearPlaceholder": "Season year (e.g. 2024)",
+        "mflPrivateSummary": "Private league? Add API key",
+        "mflPrivateHelp": "Find your API key in MFL: Account, API Access. Required for private leagues.",
+        "mflApiPlaceholder": "MFL API key",
+        "mflCta": "Connect MFL League",
+        "yahooCopy": "Connect your Yahoo account to pull your fantasy leagues. Your credentials are never stored - we use OAuth to fetch your data securely.",
+        "yahooCta": "Connect with Yahoo",
+        "yahooLeagueHint": "Or enter your league key directly (e.g. 423.l.12345)",
+        "yahooLeaguePlaceholder": "423.l.12345",
+        "yahooManualCta": "Connect with League Key",
+        "yahooToggle": "Have a league key instead?",
+        "trustLine": "Read-only access - Nothing posted to your league - No data stored externally",
+        "instantTitle": "What you'll get instantly",
+        "instantExamples": [
+          {
+            "label": "Lineup",
+            "copy": "\"Start Wicks over Tucker (+0.7 pts)\""
+          },
+          {
+            "label": "Waivers",
+            "copy": "\"Add Graham for $3-5 FAAB\""
+          },
+          {
+            "label": "Trade",
+            "copy": "\"Send Walker for Kyler + R3 (+850)\""
+          },
+          {
+            "label": "Draft",
+            "copy": "\"Target QB at 2.01 - biggest need\""
+          }
+        ],
+        "featurePills": [
+          "IDP + Superflex",
+          "Dynasty leagues",
+          "Your scoring"
+        ],
+        "afterTitle": "After connecting",
+        "afterCopy": "We scan your league - Evaluate every player - Generate your first recommendations in ~15 seconds"
+      }
+    }
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "players": {
+    "4984": { "full_name": "Josh Allen", "position": "QB", "team": "BUF", "age": 29 },
+    "11564": { "full_name": "Drake Maye", "position": "QB", "team": "NE", "age": 23 },
+    "4046": { "full_name": "Patrick Mahomes", "position": "QB", "team": "KC", "age": 30 },
+    "9509": { "full_name": "Bijan Robinson", "position": "RB", "team": "ATL", "age": 24 },
+    "9221": { "full_name": "Jahmyr Gibbs", "position": "RB", "team": "DET", "age": 24 },
+    "9226": { "full_name": "De'Von Achane", "position": "RB", "team": "MIA", "age": 24 },
+    "7564": { "full_name": "Ja'Marr Chase", "position": "WR", "team": "CIN", "age": 26 },
+    "9493": { "full_name": "Puka Nacua", "position": "WR", "team": "LAR", "age": 24 },
+    "9488": { "full_name": "Jaxon Smith-Njigba", "position": "WR", "team": "SEA", "age": 24 },
+    "11604": { "full_name": "Brock Bowers", "position": "TE", "team": "LV", "age": 23 },
+    "8130": { "full_name": "Trey McBride", "position": "TE", "team": "ARI", "age": 26 },
+    "1466": { "full_name": "Travis Kelce", "position": "TE", "team": "KC", "age": 36 },
+    "3451": { "full_name": "Ka'imi Fairbairn", "position": "K", "team": "HOU", "age": 32 },
+    "11533": { "full_name": "Brandon Aubrey", "position": "K", "team": "DAL", "age": 31 },
+    "4227": { "full_name": "Harrison Butker", "position": "K", "team": "KC", "age": 30 }
+  },
+  "stats": {
+    "4984": { "gp": 17, "pass_yd": 3750, "pass_td": 28, "pass_int": 6, "rush_yd": 520, "rush_td": 12 },
+    "11564": { "gp": 17, "pass_yd": 3600, "pass_td": 25, "pass_int": 10, "rush_yd": 420, "rush_td": 4 },
+    "4046": { "gp": 17, "pass_yd": 4100, "pass_td": 30, "pass_int": 11, "rush_yd": 310, "rush_td": 2 },
+    "9509": { "gp": 17, "rush_yd": 1450, "rush_td": 13, "rec": 58, "rec_yd": 520, "rec_td": 3 },
+    "9221": { "gp": 17, "rush_yd": 1250, "rush_td": 12, "rec": 64, "rec_yd": 610, "rec_td": 4 },
+    "9226": { "gp": 16, "rush_yd": 1050, "rush_td": 9, "rec": 62, "rec_yd": 520, "rec_td": 5 },
+    "7564": { "gp": 16, "rec": 108, "rec_yd": 1480, "rec_td": 13 },
+    "9493": { "gp": 16, "rec": 112, "rec_yd": 1520, "rec_td": 9 },
+    "9488": { "gp": 17, "rec": 105, "rec_yd": 1400, "rec_td": 10 },
+    "11604": { "gp": 17, "rec": 96, "rec_yd": 1120, "rec_td": 7 },
+    "8130": { "gp": 17, "rec": 88, "rec_yd": 960, "rec_td": 6 },
+    "1466": { "gp": 16, "rec": 72, "rec_yd": 780, "rec_td": 5 },
+    "3451": { "gp": 17, "fgm": 37, "xpm": 42 },
+    "11533": { "gp": 17, "fgm": 36, "xpm": 46 },
+    "4227": { "gp": 17, "fgm": 33, "xpm": 48 }
+  },
+  "marketRows": [
+    { "sleeper_id": "4984", "name": "Josh Allen", "position": "QB", "value": 10600, "rank": 1, "positionRank": 1 },
+    { "sleeper_id": "11564", "name": "Drake Maye", "position": "QB", "value": 9202, "rank": 6, "positionRank": 2 },
+    { "sleeper_id": "4046", "name": "Patrick Mahomes", "position": "QB", "value": 5934, "rank": 21, "positionRank": 7 },
+    { "sleeper_id": "9509", "name": "Bijan Robinson", "position": "RB", "value": 9982, "rank": 2, "positionRank": 1 },
+    { "sleeper_id": "9221", "name": "Jahmyr Gibbs", "position": "RB", "value": 9405, "rank": 5, "positionRank": 2 },
+    { "sleeper_id": "9226", "name": "De'Von Achane", "position": "RB", "value": 6281, "rank": 20, "positionRank": 4 },
+    { "sleeper_id": "7564", "name": "Ja'Marr Chase", "position": "WR", "value": 9728, "rank": 3, "positionRank": 1 },
+    { "sleeper_id": "9493", "name": "Puka Nacua", "position": "WR", "value": 8493, "rank": 7, "positionRank": 3 },
+    { "sleeper_id": "9488", "name": "Jaxon Smith-Njigba", "position": "WR", "value": 9465, "rank": 4, "positionRank": 2 },
+    { "sleeper_id": "11604", "name": "Brock Bowers", "position": "TE", "value": 7440, "rank": 9, "positionRank": 1 },
+    { "sleeper_id": "8130", "name": "Trey McBride", "position": "TE", "value": 6959, "rank": 16, "positionRank": 2 },
+    { "sleeper_id": "1466", "name": "Travis Kelce", "position": "TE", "value": 1200, "rank": 190, "positionRank": 18 }
+  ]
+}

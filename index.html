@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com https://jcc100218.github.io https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://sxshiqyxhhifvtfqawbq.supabase.co https://api.sleeper.app https://api.myfantasyleague.com https://*.myfantasyleague.com https://lm-api-reads.fantasy.espn.com https://fantasysports.yahooapis.com https://*.sentry.io; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; object-src 'none';">
+<meta name="theme-color" content="#08090b">
+<meta name="color-scheme" content="dark">
+<meta name="application-name" content="Scout">
+<meta name="apple-mobile-web-app-title" content="Scout">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no,date=no,address=no,email=no">
+<title>Dynasty HQ Scout</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<style>@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}</style>
+</head>
+<body>
+<div class="copy-toast" id="toast">Copied to clipboard!</div>
+
+<div class="app">
+  <div class="header">
+    <div class="logo" style="display:flex;align-items:center;gap:8px">
+      <img src="icons/icon-192.png" alt="Dynasty HQ" width="22" height="22" style="flex-shrink:0;border-radius:6px">
+      <span>Scout</span>
+    </div>
+    <div class="spacer"></div>
+    <div class="header-actions" style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+      <span class="pill pd" id="league-pill" style="font-size:13px;cursor:pointer;padding:4px 10px;display:flex;align-items:center;gap:4px;flex-shrink:1;min-width:0" onclick="switchLeagueMode()" title="Click to switch league"><span style="white-space:nowrap">Not connected</span><span id="platform-badge" style="display:none;font-size:10px;font-weight:700;background:#e03e2d;color:#fff;border-radius:4px;padding:1px 5px;flex-shrink:0;letter-spacing:.04em">ESPN</span><span style="opacity:.5;font-size:13px;flex-shrink:0">⇄</span></span>
+      <span class="pill pd header-hide-sm" id="week-pill" style="display:none;font-size:13px;padding:4px 10px">—</span>
+      <div class="agent-status" id="agent-status" style="font-size:13px;display:none">
+        <div class="status-dot" id="agent-dot"></div>
+        <span id="agent-txt" class="header-hide-sm">idle</span>
+      </div>
+      <span id="auth-user-badge" style="display:none;font-size:12px;color:var(--text3);padding:4px 8px;border:1px solid var(--border);border-radius:6px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;cursor:default" title="Signed in"></span>
+      <button id="refresh-btn" onclick="handleRefreshClick()" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:8px;flex-shrink:0;min-width:36px;min-height:36px;display:flex;align-items:center;justify-content:center;opacity:.7;transition:all .15s" title="Refresh data"><svg id="refresh-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></button>
+      <button id="settings-btn" onclick="switchTab('settings')" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:10px;transition:color .15s;flex-shrink:0;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center" title="Settings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></button>
+    </div>
+  </div>
+
+  <!-- Trial Banner — shown during 30-day trial, dismissible daily -->
+  <div id="trial-banner" class="trial-banner" style="display:none">
+    <span id="trial-banner-text" class="trial-banner-text">
+      <span id="trial-banner-days">30 days</span> left of full access
+    </span>
+    <button onclick="showProLaunchPage()" class="trial-banner-upgrade">Upgrade</button>
+    <button onclick="dismissTrialBanner()" class="trial-banner-dismiss" aria-label="Dismiss">&times;</button>
+  </div>
+
+  <div class="content">
+
+    <!-- DAILY DIGEST / HOME -->
+    <div class="panel active" id="panel-digest">
+
+      <!-- League Hub — save-slot style selector (shown for returning users) -->
+      <div id="league-hub" style="display:none"></div>
+
+      <!-- Auth step — front door for new users, shown before connect form -->
+      <div id="auth-step" style="display:none;text-align:center;padding:40px 20px;max-width:360px;margin:0 auto">
+        <div style="margin:0 auto 16px;width:56px;height:56px;background:linear-gradient(135deg,#d4af37,#b8941f);border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 32px rgba(212,175,55,0.35)">
+          <svg viewBox="0 0 32 32" width="28" height="28" fill="none"><circle cx="16" cy="16" r="10" stroke="#f5e3a3" stroke-width="1.5" stroke-dasharray="3 2" opacity="0.6"/><circle cx="16" cy="16" r="5" stroke="#f5e3a3" stroke-width="1.5"/><circle cx="16" cy="16" r="1.5" fill="#f5e3a3"/></svg>
+        </div>
+        <div id="scout-welcome-title" style="font-size:26px;font-weight:800;color:#d4af37;letter-spacing:-.04em;margin-bottom:8px">Welcome to Scout</div>
+        <div id="scout-welcome-subtitle" style="font-size:14px;color:var(--text3);margin-bottom:32px;line-height:1.5">Dynasty intelligence, powered by AI</div>
+        <button id="scout-google-btn" onclick="window.OD?.signInWithGoogle?.()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 16px;border-radius:10px;border:1px solid #dadce0;background:#fff;color:#3c4043;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px;box-sizing:border-box;font-family:'DM Sans',sans-serif;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.18)'" onmouseout="this.style.boxShadow='none'">
+          <svg viewBox="0 0 24 24" width="18" height="18" style="flex-shrink:0"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+          Sign in with Google
+        </button>
+        <button id="scout-apple-btn" onclick="window.OD?.signInWithApple?.()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 16px;border-radius:10px;border:none;background:#000;color:#fff;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:24px;box-sizing:border-box;font-family:'DM Sans',sans-serif;transition:opacity .15s" onmouseover="this.style.opacity='.82'" onmouseout="this.style.opacity='1'">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="#fff" style="flex-shrink:0"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          Sign in with Apple
+        </button>
+        <div id="scout-auth-divider" style="font-size:12px;color:var(--text3);margin-bottom:16px">— or —</div>
+        <a id="scout-guest-link" onclick="continueAsGuest()" style="color:#d4af37;font-size:13px;cursor:pointer;text-decoration:underline;text-underline-offset:3px">Continue as guest</a>
+      </div>
+
+      <!-- Connect form — platform tabs (shown after auth or guest) -->
+      <div class="setup" id="setup-block" style="display:none">
+        <div id="connect-step">
+          <!-- Header -->
+          <div style="text-align:center;margin-bottom:20px">
+            <h3 id="connect-heading" style="font-size:20px;font-weight:800;letter-spacing:-.03em;margin-bottom:4px">Connect your leagues</h3>
+            <p id="connect-subtitle" style="font-size:13px;color:var(--text3);line-height:1.5">Instant lineup, waiver, trade, and draft intelligence</p>
+          </div>
+
+          <!-- Platform tabs -->
+          <div style="max-width:380px;margin:0 auto 12px;display:flex;gap:6px;background:var(--bg3);border-radius:10px;padding:4px">
+            <button id="tab-sleeper" onclick="showPlatformTab('sleeper')" style="flex:1;padding:8px 12px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:var(--bg);color:var(--text);transition:all .15s">Sleeper</button>
+            <button id="tab-espn" onclick="showPlatformTab('espn')" style="display:none;flex:1;padding:8px 12px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:all .15s">ESPN</button>
+            <button id="tab-mfl" onclick="showPlatformTab('mfl')" style="display:none;flex:1;padding:8px 12px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:all .15s">MFL</button>
+            <button id="tab-yahoo" onclick="showPlatformTab('yahoo')" style="display:none;flex:1;padding:8px 12px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--text3);transition:all .15s">Yahoo</button>
+          </div>
+
+          <!-- Sleeper form -->
+          <div id="form-sleeper" style="max-width:380px;margin:0 auto 14px">
+            <input type="text" id="u-input" placeholder="Sleeper username" style="width:100%;font-size:16px;padding:14px 16px;border-radius:12px;margin-bottom:8px;box-sizing:border-box" onkeydown="if(event.key==='Enter')connect()"/>
+            <button class="btn" id="conn-btn" onclick="connect()" style="width:100%;padding:14px;font-size:15px;font-weight:700;border-radius:12px;box-sizing:border-box">Connect my league</button>
+          </div>
+
+          <!-- ESPN form -->
+          <div id="form-espn" style="display:none;max-width:380px;margin:0 auto 14px">
+            <input type="text" id="espn-league-id" placeholder="ESPN League ID" style="width:100%;font-size:16px;padding:14px 16px;border-radius:12px;margin-bottom:8px;box-sizing:border-box" onkeydown="if(event.key==='Enter')connectESPN()"/>
+            <details style="margin-bottom:8px">
+              <summary style="font-size:13px;color:var(--text3);cursor:pointer;padding:6px 0;list-style:none;display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:var(--text3)">&#9654;</span> Private league? Add cookies</summary>
+              <div style="padding:10px 0 4px">
+                <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:8px">Find these in your browser: open ESPN Fantasy, press F12 → Application → Cookies → fantasy.espn.com</div>
+                <input type="password" id="espn-s2" placeholder="espn_s2 cookie value" style="width:100%;font-size:13px;padding:10px 12px;border-radius:8px;margin-bottom:6px;box-sizing:border-box;font-family:monospace"/>
+                <input type="text" id="espn-swid" placeholder="SWID cookie value  {XXXXXXXX-...}" style="width:100%;font-size:13px;padding:10px 12px;border-radius:8px;box-sizing:border-box;font-family:monospace"/>
+              </div>
+            </details>
+            <button class="btn" id="espn-conn-btn" onclick="connectESPN()" style="width:100%;padding:14px;font-size:15px;font-weight:700;border-radius:12px;box-sizing:border-box;background:linear-gradient(135deg,#e03e2d,#c0392b)">Connect ESPN League</button>
+          </div>
+
+          <!-- MFL form -->
+          <div id="form-mfl" style="display:none;max-width:380px;margin:0 auto 14px">
+            <input type="text" id="mfl-league-id" placeholder="MFL League ID" style="width:100%;font-size:16px;padding:14px 16px;border-radius:12px;margin-bottom:8px;box-sizing:border-box" onkeydown="if(event.key==='Enter')connectMFL()"/>
+            <input type="text" id="mfl-year" placeholder="Season year (e.g. 2024)" style="width:100%;font-size:16px;padding:14px 16px;border-radius:12px;margin-bottom:8px;box-sizing:border-box" onkeydown="if(event.key==='Enter')connectMFL()"/>
+            <details style="margin-bottom:8px">
+              <summary style="font-size:13px;color:var(--text3);cursor:pointer;padding:6px 0;list-style:none;display:flex;align-items:center;gap:6px"><span style="font-size:11px;color:var(--text3)">&#9654;</span> Private league? Add API key</summary>
+              <div style="padding:10px 0 4px">
+                <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:8px">Find your API key in MFL: Account → API Access. Required for private leagues.</div>
+                <input type="password" id="mfl-api-key" placeholder="MFL API key" style="width:100%;font-size:13px;padding:10px 12px;border-radius:8px;box-sizing:border-box;font-family:monospace"/>
+              </div>
+            </details>
+            <button class="btn" id="mfl-conn-btn" onclick="connectMFL()" style="width:100%;padding:14px;font-size:15px;font-weight:700;border-radius:12px;box-sizing:border-box;background:linear-gradient(135deg,#0057b8,#003d8a)">Connect MFL League</button>
+          </div>
+
+          <!-- Yahoo form -->
+          <div id="form-yahoo" style="display:none;max-width:380px;margin:0 auto 14px">
+            <div style="text-align:center;padding:10px 0 16px">
+              <div style="display:inline-block;background:linear-gradient(135deg,#6001d2,#430099);border-radius:12px;padding:10px 16px;margin-bottom:12px">
+                <svg viewBox="0 0 60 20" width="60" height="20" fill="white"><text x="0" y="16" font-family="Arial Black,sans-serif" font-weight="900" font-size="18">Yahoo!</text></svg>
+              </div>
+              <p style="font-size:14px;color:var(--text2);line-height:1.6;margin:0">Connect your Yahoo account to pull your fantasy leagues. Your credentials are never stored — we use OAuth to fetch your data securely.</p>
+            </div>
+            <button class="btn" id="yahoo-conn-btn" onclick="connectYahoo()" style="width:100%;padding:14px;font-size:15px;font-weight:700;border-radius:12px;box-sizing:border-box;background:linear-gradient(135deg,#6001d2,#430099)">Connect with Yahoo</button>
+            <div id="yahoo-league-key-section" style="display:none;margin-top:10px">
+              <div style="font-size:12px;color:var(--text3);text-align:center;margin-bottom:8px">Or enter your league key directly (e.g. 423.l.12345)</div>
+              <input type="text" id="yahoo-league-key" placeholder="423.l.12345" style="width:100%;font-size:15px;padding:12px 14px;border-radius:10px;margin-bottom:8px;box-sizing:border-box;font-family:monospace" onkeydown="if(event.key==='Enter')connectYahooManual()"/>
+              <button class="btn btn-ghost" onclick="connectYahooManual()" style="width:100%;padding:12px;font-size:14px;font-weight:700;border-radius:10px;box-sizing:border-box">Connect with League Key</button>
+            </div>
+            <button onclick="document.getElementById('yahoo-league-key-section').style.display=document.getElementById('yahoo-league-key-section').style.display==='none'?'block':'none'" style="display:block;width:100%;margin-top:8px;background:none;border:none;cursor:pointer;font-size:12px;color:var(--text3);text-align:center;padding:4px">Have a league key instead?</button>
+          </div>
+
+          <div id="conn-status" class="status-txt" style="text-align:center;margin-bottom:4px"></div>
+          <div class="prog" id="prog" style="display:none;max-width:380px;margin:0 auto"><div class="prog-bar" id="prog-bar" style="width:0%"></div></div>
+
+          <!-- Trust line -->
+          <div id="connect-trust-line" style="text-align:center;font-size:13px;color:var(--text3);margin-bottom:16px">
+            Read-only access · Nothing posted to your league · No data stored externally
+          </div>
+
+          <!-- What you'll get — concrete examples -->
+          <div style="max-width:380px;margin:0 auto 16px">
+            <div id="connect-instant-title" style="font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;text-align:center">What you'll get instantly</div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg3);border-radius:8px;font-size:13px">
+                <span style="color:var(--green);font-weight:700;flex-shrink:0">Lineup</span>
+                <span style="color:var(--text2)">"Start Wicks over Tucker (+0.7 pts)"</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg3);border-radius:8px;font-size:13px">
+                <span style="color:var(--accent);font-weight:700;flex-shrink:0">Waivers</span>
+                <span style="color:var(--text2)">"Add Graham for $3–5 FAAB"</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg3);border-radius:8px;font-size:13px">
+                <span style="color:var(--amber);font-weight:700;flex-shrink:0">Trade</span>
+                <span style="color:var(--text2)">"Send Walker for Kyler + R3 (+850)"</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg3);border-radius:8px;font-size:13px">
+                <span style="color:var(--blue);font-weight:700;flex-shrink:0">Draft</span>
+                <span style="color:var(--text2)">"Target QB at 2.01 — biggest need"</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Feature pills -->
+          <div id="connect-feature-pills" style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:16px">
+            <span style="font-size:13px;padding:4px 10px;background:var(--bg3);border-radius:20px;color:var(--text3)">IDP + Superflex</span>
+            <span style="font-size:13px;padding:4px 10px;background:var(--bg3);border-radius:20px;color:var(--text3)">Dynasty leagues</span>
+            <span style="font-size:13px;padding:4px 10px;background:var(--bg3);border-radius:20px;color:var(--text3)">Your scoring</span>
+          </div>
+
+          <!-- After connecting -->
+          <div style="max-width:340px;margin:0 auto;text-align:center">
+            <div id="connect-after-title" style="font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">After connecting</div>
+            <div id="connect-after-copy" style="font-size:13px;color:var(--text3);line-height:1.6">
+              We scan your league · Evaluate every player · Generate your first recommendations in ~15 seconds
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Home feed — post-connection -->
+      <div id="digest-content" style="display:none">
+
+        <!-- Progress bar (replaces loading banner) -->
+        <div id="dhq-progress" class="dhq-progress-bar" style="display:none"><div id="dhq-progress-fill" class="dhq-progress-fill" style="width:0%"></div></div>
+
+        <!-- API key callout (conditional) -->
+        <div id="api-key-callout" style="display:none;margin-bottom:12px;padding:10px 14px;background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.15);border-radius:var(--r)">
+          <div style="font-size:13px;color:var(--amber);line-height:1.5"></div>
+        </div>
+
+        <!-- ── SCOUT BRIEFING ── -->
+        <div class="scout-briefing" id="scout-briefing">
+          <div class="scout-briefing-header" onclick="toggleScoutBriefing()">
+            <span class="scout-briefing-icon">⚡</span>
+            <span class="scout-briefing-title" id="scout-briefing-title">Loading your briefing...</span>
+            <span class="scout-briefing-count" id="scout-briefing-count" style="display:none">0</span>
+            <span class="scout-briefing-chevron">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </span>
+          </div>
+          <div class="scout-briefing-items" id="scout-briefing-items" style="display:none"></div>
+        </div>
+
+        <!-- ── FIELD LOG CARD ── -->
+        <div class="field-log-card" id="field-log-card-home">
+          <div class="field-log-card-header">
+            <span class="field-log-card-title">Notes from the Front</span>
+            <span class="field-log-sync-badge">Synced to War Room</span>
+          </div>
+          <div id="field-log-entries-home"></div>
+          <button onclick="mobileTab('fieldlog')" class="field-log-see-all">View full log →</button>
+        </div>
+
+        <!-- Legacy home sections — hidden, v4 components above replace these -->
+        <div id="home-team-snapshot" style="display:none"></div>
+        <div id="home-hero-action" style="display:none"></div>
+        <div id="home-prepare" style="display:none"></div>
+        <div id="home-biggest-needs" style="display:none"></div>
+        <div class="recon-chat-module" style="display:none">
+          <div id="home-chat-msgs"></div>
+          <input type="text" id="home-chat-in" onkeydown="if(event.key==='Enter')sendHomeChat()"/>
+        </div>
+        <div id="home-crown-jewels" style="display:none"></div>
+        <div id="player-search-wrap" style="margin:8px 0">
+          <input type="text" id="player-search-in" placeholder="Search players..." oninput="handlePlayerSearch(this.value)" style="width:100%;padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:14px;font-family:inherit"/>
+          <div id="player-search-results"></div>
+        </div>
+        <div id="sync-status" style="display:none">
+          <span id="sync-fc"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--text3);margin-right:4px;vertical-align:middle"></span> DHQ...</span>
+          <span id="sync-stats"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--amber);margin-right:4px;vertical-align:middle"></span> Stats...</span>
+          <span id="sync-li"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--text3);margin-right:4px;vertical-align:middle"></span> Intel...</span>
+        </div>
+        <div id="league-pulse" style="display:none"></div>
+
+      </div>
+    </div>
+
+    <!-- TEAM COMMAND -->
+    <div class="panel" id="panel-team">
+      <div id="panel-team-content">
+        <div class="scout-empty-card">Connect your league to load Team Command.</div>
+      </div>
+    </div>
+
+    <!-- TOOLS -->
+    <div class="panel" id="panel-tools">
+      <div id="panel-tools-content">
+        <div class="scout-empty-card">Connect your league to load Scout tools.</div>
+      </div>
+    </div>
+
+    <!-- PORTFOLIO -->
+    <div class="panel" id="panel-portfolio">
+      <div id="panel-portfolio-content">
+        <div class="scout-empty-card">Connect or choose a league to load your portfolio.</div>
+      </div>
+    </div>
+
+    <!-- START/SIT / LINEUP -->
+    <div class="panel" id="panel-startsit">
+      <!-- Lineup header + optimize bar -->
+      <div id="lineup-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div>
+          <div style="font-size:18px;font-weight:800;color:var(--text);letter-spacing:-.02em" id="lineup-week-title">Lineup</div>
+          <div style="font-size:13px;color:var(--text3);margin-top:2px" id="lineup-subtitle">Optimal starters by projection</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:28px;font-weight:800;color:var(--accent);font-family:'JetBrains Mono',monospace;letter-spacing:-.03em" id="lineup-total-proj">—</div>
+          <div style="font-size:13px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Projected</div>
+        </div>
+      </div>
+
+      <!-- Optimize button -->
+      <div id="lineup-optimize-bar"></div>
+
+      <!-- View toggle: Starters / Bench -->
+      <div style="display:flex;gap:0;margin-bottom:12px;background:var(--bg2);border-radius:10px;padding:3px;border:1px solid var(--border)">
+        <button class="lu-seg active" id="lu-seg-starters" onclick="switchLineupView('starters')">Starters</button>
+        <button class="lu-seg" id="lu-seg-bench" onclick="switchLineupView('bench')">Better Options</button>
+      </div>
+
+      <!-- Content -->
+      <div id="lineup-starters-view">
+        <div id="startsit-content">
+          <div class="skel-card"><div class="skel skel-line" style="width:50%"></div><div class="skel skel-block"></div><div class="skel skel-line" style="width:80%"></div></div>
+        </div>
+      </div>
+      <div id="lineup-bench-view" style="display:none">
+        <div id="lineup-bench-content"></div>
+      </div>
+    </div>    <!-- ROSTER -->
+    <div class="panel" id="panel-roster">
+      <!-- Mobile filter bar -->
+      <div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px" id="roster-filter-btns">
+        <button class="rfbtn active" onclick="setRosterFilter('all',this)">All</button>
+        <button class="rfbtn" onclick="setRosterFilter('OFF',this)">Offense</button>
+        <button class="rfbtn" onclick="setRosterFilter('IDP',this)">IDP</button>
+        <button class="rfbtn" onclick="setRosterFilter('taxi',this)">Taxi</button>
+        <div style="flex:1"></div>
+        <button class="rfbtn" onclick="cycleRosterSort()" id="roster-sort-btn" style="font-size:13px;white-space:nowrap">Sort: Value ↓</button>
+      </div>
+      <!-- Roster count + sort hint (compact) -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:13px;color:var(--text3)" id="roster-count"></div>
+      </div>
+      <!-- Mobile roster list -->
+      <div id="roster-tbody" style="display:flex;flex-direction:column;gap:4px">
+        <div style="padding:20px;text-align:center;color:var(--text3);font-size:14px">Connect to load roster.</div>
+      </div>
+      <!-- Pick assets -->
+      <div class="sec" style="margin-top:16px">My draft picks (next 3 years) <div class="sec-line"></div>
+        <button class="btn btn-ghost btn-sm" onclick="runPicksAI()" id="picks-ai-btn">AI analysis ↗</button>
+      </div>
+      <div id="picks-mine"><div class="empty">Connect to see picks.</div></div>
+      <div id="picks-ai-content" style="margin-top:10px"></div>
+      <!-- DHQ tip (hidden, shown on demand) -->
+      <div class="tip-box" id="tip-dhq" style="margin-top:10px">
+        <strong>DHQ Value (0-10,000)</strong> is a dynasty trade value computed from YOUR league's actual data.<br><br>
+        <strong>How it's calculated:</strong><br>
+        &bull; <strong>40% Production</strong> — weighted PPG from the last 5 seasons<br>
+        &bull; <strong>25% Age curve</strong> — position-specific peak windows<br>
+        &bull; <strong>20% Situation</strong> — roster status, role, trajectory<br>
+        &bull; <strong>10% Scarcity</strong> — supply vs demand at position<br>
+        &bull; <strong>5% Peak bonus</strong> — years of prime remaining<br>
+      </div>
+    </div>
+
+    <!-- START/SIT -->
+    <!-- WAIVERS -->
+    <div class="panel" id="panel-waivers">
+      <!-- FAAB context banner -->
+      <div id="faab-bar" style="display:none;margin-bottom:12px">
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:12px 14px">
+          <div id="faab-context-line" style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px"></div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--text3)">
+            <span id="faab-mine">—</span>
+            <span id="faab-avg">—</span>
+            <span id="bench-slots">—</span>
+            <span id="waiver-pos-display">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Waiver Workbench primary surface. Legacy mount is kept for fallback callers. -->
+      <div id="waiver-workbench"></div>
+      <div id="waiver-alex-top5" style="display:none"></div>
+    </div>
+
+    <!-- TRADE FINDER -->
+    <!-- TRADES -->
+    <div class="panel" id="panel-trades">
+      <!-- Header + sub-nav -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-size:16px;font-weight:800;letter-spacing:-.03em">Trade Studio</div>
+          <div style="font-size:13px;color:var(--text3);margin-top:3px">Partner fit · generated packages · saved deal work</div>
+        </div>
+      </div>
+      <!-- Trade chat history (input handled by global chat bar) -->
+      <div id="trade-chat-msgs" style="max-height:0;overflow:hidden;padding:0 16px;display:flex;flex-direction:column;gap:8px;transition:max-height .3s ease,padding .3s ease;margin-bottom:8px"></div>
+      <input type="text" id="trade-chat-in" style="display:none" onkeydown="if(event.key==='Enter')sendTradeChat()"/>
+
+      <!-- Best trade available hero -->
+      <div id="trades-hero"></div>
+
+      <!-- Trade Calculator (league overview, partner finder, builder, DNA) -->
+      <div id="trade-calc-container"></div>
+
+      <!-- Trade Intel — depth, needs, top assets -->
+      <div id="trade-intel" style="margin-top:14px"></div>
+
+      <!-- Recent league trades -->
+      <div style="margin-top:14px">
+        <div style="font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Recent league trades</div>
+        <div id="trades-recent"><div class="empty">Connect to see trades.</div></div>
+      </div>
+    </div>
+
+    <!-- PLAYER PROFILE — Mobile bottom sheet -->
+    <div id="player-modal" class="pm-overlay" aria-hidden="true">
+      <div class="pm-card">
+        <div class="bottom-sheet-handle"></div>
+        <button onclick="closePlayerModal()" class="pm-close">&times;</button>
+        <!-- Header -->
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">
+          <div style="position:relative;flex-shrink:0">
+            <img id="pm-photo" src="" class="pm-avatar" onerror="this.style.display='none';document.getElementById('pm-initials').style.display='flex'"/>
+            <div id="pm-initials" class="pm-avatar-fallback"></div>
+            <div id="pm-pos-badge" class="pm-pos-badge"></div>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div id="pm-name" style="font-size:16px;font-weight:700;letter-spacing:-.02em;color:var(--text);line-height:1.15;margin-bottom:2px"></div>
+            <div id="pm-bio" style="font-size:12px;color:var(--text3);margin-bottom:4px"></div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap" id="pm-tags"></div>
+          </div>
+        </div>
+        <!-- Hidden stubs for JS compat -->
+        <div id="pm-verdict" style="display:none"></div>
+        <div id="pm-idp-badge" style="display:none"></div>
+        <div id="pm-insight" style="display:none"></div>
+        <!-- Stats bar -->
+        <div id="pm-stats-bar" class="pm-stats-grid"></div>
+        <!-- NFL Depth label -->
+        <div id="pm-depth-label" style="text-align:center;font-size:11px;color:var(--text3);margin:-8px 0 10px;text-transform:uppercase;letter-spacing:.05em"></div>
+        <!-- Age curve -->
+        <div style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+            <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Age Curve</div>
+            <div id="pm-peak-tag" style="font-size:11px;color:var(--text2)"></div>
+          </div>
+          <div class="age-curve-bar" id="pm-curve"></div>
+          <div class="acb-label" id="pm-curve-lbl"></div>
+        </div>
+        <!-- Hidden sparkline stub -->
+        <div id="pm-spark-wrap" style="display:none"><div id="pm-spark"></div><div id="pm-spark-lbl"></div></div>
+        <!-- Dynasty Value + Trade Profile -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+          <div style="background:var(--bg3);border-radius:var(--r);padding:10px 12px">
+            <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Dynasty Value</div>
+            <div id="pm-trade-val" style="font-size:20px;font-weight:700;letter-spacing:-.02em;color:var(--accent)"></div>
+            <div id="pm-trade-tier" style="font-size:12px;color:var(--text2);margin-top:2px"></div>
+          </div>
+          <div id="pm-right-panel" style="background:var(--bg3);border-radius:var(--r);padding:10px 12px"></div>
+        </div>
+        <!-- Tags -->
+        <div id="pm-tag-section" style="display:none"></div>
+        <!-- Hidden action button stubs -->
+        <button id="pm-ask-btn" style="display:none"></button>
+        <button id="pm-trade-btn" style="display:none"></button>
+      </div>
+    </div>
+
+    <!-- DRAFT ROOM -->
+    <div class="panel" id="panel-draftroom">
+
+      <!-- Draft entry view — shown by default -->
+      <div id="draft-entry-view">
+        <div style="font-size:18px;font-weight:800;letter-spacing:-.03em;margin-bottom:4px">Draft Room</div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:16px">Rookie prospects · mock drafts · pick strategy</div>
+
+        <!-- Big Board entry card -->
+        <div class="draft-entry-card" onclick="enterDraftRoom('board')" style="margin-bottom:10px">
+          <div class="draft-entry-icon" style="background:rgba(212,175,55,.12)">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--accent)" stroke-width="1.8">
+              <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
+              <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+          </div>
+          <div class="draft-entry-body">
+            <div class="draft-entry-title">Big Board</div>
+            <div class="draft-entry-sub" id="draft-entry-board-sub">DHQ-ranked prospects · tap to rank</div>
+          </div>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+
+        <!-- Mock Draft entry card -->
+        <div class="draft-entry-card" onclick="enterDraftRoom('mock')" style="margin-bottom:16px">
+          <div class="draft-entry-icon" style="background:rgba(52,211,153,.08)">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--green)" stroke-width="1.8">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+          </div>
+          <div class="draft-entry-body">
+            <div class="draft-entry-title">Dynamic Mock Draft</div>
+            <div class="draft-entry-sub" id="draft-entry-mock-sub">Owner DNA simulation · 16 teams</div>
+          </div>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+
+        <!-- Your picks summary (compact, always visible on entry) -->
+        <div id="draft-entry-picks"></div>
+      </div>
+
+      <!-- Big Board full-screen view -->
+      <div id="draft-board-fullview" style="display:none">
+        <!-- Back header -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+          <button onclick="exitDraftRoom()" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--text2);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            Draft Room
+          </button>
+          <div style="font-size:16px;font-weight:800;letter-spacing:-.02em">Big Board</div>
+        </div>
+
+        <!-- Your picks card (compact) -->
+        <div id="draft-my-picks" style="margin-bottom:14px"></div>
+
+        <!-- Alex's top pick hero -->
+        <div id="draft-alex-hero" style="margin-bottom:14px"></div>
+
+        <!-- Position filter + rookie list -->
+        <div id="draft-top-prospects"></div>
+
+        <!-- Draft Intel (bar chart + hit rates) -->
+        <div id="draft-summary" style="margin-bottom:14px">
+          <div id="draft-summary-content"></div>
+        </div>
+
+        <!-- Data quality note -->
+        <div style="font-size:12px;color:var(--text3);padding:8px 12px;background:var(--bg2);border-radius:var(--r);margin-top:14px;line-height:1.5">
+          Rookie rankings improve as the NFL draft approaches. Pre-draft data is speculative.
+        </div>
+      </div>
+
+      <!-- Mock Draft full-screen view -->
+      <div id="draft-mock-fullview" style="display:none">
+        <!-- Back header -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+          <button onclick="exitDraftRoom()" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--text2);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            Draft Room
+          </button>
+          <div style="font-size:16px;font-weight:800;letter-spacing:-.02em">Dynamic Mock Draft</div>
+        </div>
+
+        <!-- Mock draft content (existing mock UI goes here) -->
+        <div id="draft-mock" style="margin-bottom:14px"></div>
+      </div>
+
+      <!-- Keep these hidden stubs for JS compat -->
+      <div id="draft-needs" style="display:none"></div>
+      <div id="rookie-profiles" style="display:none"></div>
+      <div id="draft-scout-content" style="display:none"></div>
+      <div id="draft-chat-collapse" style="display:none"></div>
+      <div id="draft-msgs" style="display:none"></div>
+      <input type="text" id="draft-chat-in" style="display:none" onkeydown="if(event.key==='Enter')sendDraftChat()"/>
+      <div id="draft-history-section" style="display:none"></div>
+      <div id="draft-best-bet" style="display:none"></div>
+    </div>
+
+    <!-- AI AGENT -->
+
+    <!-- ANALYTICS -->
+    <!-- STATS EXPLORER -->
+    <!-- MEMORY — merged: notes + AI summary + past sessions -->
+
+    <!-- SETTINGS -->
+    <div class="panel" id="panel-settings">
+
+      <!-- Account (OAuth) -->
+      <div id="settings-account-section" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:14px 16px;margin-bottom:14px">
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px">Account</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <span id="settings-account-email" style="font-size:13px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+          <button onclick="window.OD.signOut()" style="flex-shrink:0;padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text3);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Sign out</button>
+        </div>
+      </div>
+
+      <!-- Subscription management (Pro users) -->
+      <div id="settings-manage-sub" style="display:none;text-align:center;margin-bottom:14px">
+        <button onclick="showProLaunchPage()" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--accent);text-decoration:underline;font-family:inherit;padding:4px">Manage Subscription</button>
+      </div>
+
+      <!-- Trial / Subscription -->
+      <details class="settings-section" id="trial-settings-section">
+        <summary class="settings-summary">
+          <span>Scout Trial</span>
+          <span id="trial-settings-badge" style="font-size:13px;color:var(--accent);font-weight:600"></span>
+        </summary>
+        <div style="padding:12px 0 4px">
+          <div id="trial-settings-info"></div>
+          <button class="btn" style="padding:10px 18px;width:100%;font-size:14px;font-weight:700;background:linear-gradient(135deg,#d4af37,#b8941f);box-shadow:0 4px 16px rgba(212,175,55,.25)" onclick="showProLaunchPage()">Upgrade to War Room — $9.99/mo</button>
+        </div>
+      </details>
+
+      <!-- Alex Style Picker (collapsed by default) -->
+      <details style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);margin-bottom:14px">
+        <summary style="padding:14px 16px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;user-select:none">
+          <span style="font-size:14px;font-weight:700;color:var(--text);flex:1">Alex's Style</span>
+          <span id="alex-style-current" style="font-size:12px;color:var(--text3)"></span>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--text3)" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <div style="padding:0 16px 14px">
+          <div style="font-size:12px;color:var(--text3);margin-bottom:10px">How Alex communicates across all AI responses.</div>
+          <div id="alex-style-picker" style="display:flex;flex-direction:column;gap:6px"></div>
+          <button class="btn btn-ghost" onclick="window.replayScoutTutorial&&window.replayScoutTutorial()" style="margin-top:10px;width:100%;padding:9px 12px;font-size:13px;border-color:rgba(212,175,55,.28);color:var(--accent)">Replay GM Briefing</button>
+        </div>
+      </details>
+      <script>
+      (function(){
+        const el=document.getElementById('alex-style-picker');if(!el)return;
+        function render(){
+          const styles=window.ALEX_STYLES||{};const cur=localStorage.getItem('wr_alex_style')||'default';
+          const curLabel=document.getElementById('alex-style-current');
+          if(curLabel&&styles[cur])curLabel.textContent=styles[cur].name||'Default';
+          el.innerHTML=Object.entries(styles).map(([k,s])=>`<button onclick="localStorage.setItem('wr_alex_style','${k}');this.closest('details').querySelector('#alex-style-current').textContent='${(s.name||'').replace(/'/g,"\\'")}';document.querySelectorAll('#alex-style-picker button').forEach(b=>{b.style.borderColor='var(--border)';b.style.background='var(--bg3)';b.querySelector('div').style.color='var(--text)'});this.style.borderColor='var(--accent)';this.style.background='rgba(212,175,55,.06)';this.querySelector('div').style.color='var(--accent)'" style="text-align:left;padding:10px 12px;background:${k===cur?'rgba(212,175,55,.06)':'var(--bg3)'};border:1px solid ${k===cur?'var(--accent)':'var(--border)'};border-radius:8px;cursor:pointer;font-family:inherit"><div style="font-size:13px;font-weight:700;color:${k===cur?'var(--accent)':'var(--text)'}">${s.name}${k===cur?' ✓':''}</div><div style="font-size:11px;color:var(--text3);line-height:1.4;margin-top:2px">${(s.tone||'').substring(0,80)}...</div></button>`).join('');
+        }
+        if(window.ALEX_STYLES)render();else setTimeout(render,500);
+      })();
+      </script>
+
+      <!-- 1. System Status -->
+      <div id="settings-status" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:14px 16px;margin-bottom:14px">
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:10px">Scout Status</div>
+        <div id="settings-status-lines" style="display:flex;flex-direction:column;gap:6px;font-size:13px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span id="st-ai-dot" style="width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0"></span>
+            <span style="color:var(--text2)">AI:</span>
+            <span id="st-ai-label" style="color:var(--text3)">Checking...</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span id="st-league-dot" style="width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0"></span>
+            <span style="color:var(--text2)">League:</span>
+            <span id="st-league-label" style="color:var(--text3)">Not connected</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span id="st-strat-dot" style="width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0"></span>
+            <span style="color:var(--text2)">Strategy:</span>
+            <span id="st-strat-label" style="color:var(--text3)">Not set</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. AI Setup (collapsible) -->
+      <details class="settings-section" open id="ai-setup-details">
+        <summary class="settings-summary">
+          <span>AI Provider</span>
+          <span id="ai-setup-badge" style="font-size:13px;color:var(--text3);font-weight:400"></span>
+        </summary>
+        <div style="padding:12px 0 4px">
+          <!-- Server-side AI status -->
+          <div id="ai-server-status" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rl);margin-bottom:12px">
+            <div id="ai-server-dot" style="width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0"></div>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:600;color:var(--text)" id="ai-server-label">Checking AI...</div>
+              <div style="font-size:13px;color:var(--text3);margin-top:2px" id="ai-server-detail">AI is powered by your account — no API key needed.</div>
+            </div>
+          </div>
+
+          <!-- Advanced: bring your own key (collapsed by default) -->
+          <details style="margin-top:6px">
+            <summary style="font-size:13px;color:var(--text3);cursor:pointer;padding:4px 0">Advanced: use your own API key</summary>
+            <div style="padding:8px 0">
+              <div style="font-size:13px;color:var(--text3);margin-bottom:8px;line-height:1.5">Bring your own key for unlimited usage. <strong style="color:var(--green)">Gemini is free.</strong></div>
+              <div style="margin-bottom:8px">
+                <select id="ai-provider-sel" style="width:100%;font-size:14px;padding:10px 12px" onchange="updateProviderHint()">
+                  <option value="gemini">Gemini Flash — Free (Google)</option>
+                  <option value="openai">OpenAI — GPT-5.4 Mini</option>
+                  <option value="anthropic">Claude (Anthropic) — Premium</option>
+                </select>
+              </div>
+              <div id="provider-hint" style="font-size:13px;color:var(--text3);margin-bottom:8px;line-height:1.5"></div>
+              <div style="display:flex;gap:8px;margin-bottom:8px">
+                <input type="password" id="api-key-in" placeholder="Paste API key..." style="font-family:monospace;font-size:14px;flex:1;padding:10px 12px"/>
+                <button class="btn" onclick="saveKey()" style="padding:10px 18px">Save</button>
+              </div>
+              <div id="key-status" class="status-txt"></div>
+              <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+                <input type="text" id="ai-model-in" placeholder="Model (auto)" style="font-size:13px;flex:1;padding:8px 10px"/>
+                <button class="btn btn-ghost btn-sm" onclick="clearKey()">Clear key</button>
+              </div>
+            </div>
+          </details>
+        </div>
+      </details>
+
+      <!-- 3. Team Strategy -->
+      <details class="settings-section" open>
+        <summary class="settings-summary">
+          <span>Team Strategy</span>
+          <span id="strat-badge" style="font-size:13px;color:var(--text3);font-weight:400"></span>
+        </summary>
+        <div style="padding:12px 0 4px">
+          <div style="font-size:13px;color:var(--text3);margin-bottom:10px">Shapes every AI recommendation — trades, waivers, and draft picks.</div>
+
+          <div style="margin-bottom:10px">
+            <div style="font-size:13px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Mentality</div>
+            <select id="mentality-sel" style="width:100%;font-size:14px;padding:10px 12px">
+              <option value="balanced">Balanced — compete + build</option>
+              <option value="winnow">Win Now — maximize this season</option>
+              <option value="rebuild">Rebuild — youth + picks</option>
+              <option value="prime">Dynasty Prime — 2–3yr window</option>
+            </select>
+          </div>
+
+          <div style="margin-bottom:10px">
+            <div style="font-size:13px;color:var(--red);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;font-weight:600">Untouchable players</div>
+            <input type="text" id="never-drop" placeholder="e.g. CeeDee Lamb, Bijan Robinson, 2026 1st..." style="font-size:14px;padding:10px 12px"/>
+          </div>
+
+          <details style="margin-bottom:10px">
+            <summary style="font-size:13px;color:var(--text3);cursor:pointer;padding:4px 0">Additional notes for AI</summary>
+            <textarea id="mentality-notes" placeholder="League rules, family rivalries, taxi squad notes..." style="font-size:13px;min-height:50px;margin-top:6px;padding:10px 12px"></textarea>
+          </details>
+
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn" onclick="saveMentality()" style="padding:10px 18px">Save strategy</button>
+            <div id="mentality-saved" style="font-size:13px;color:var(--green);display:none">Saved ✓</div>
+          </div>
+        </div>
+      </details>
+
+      <!-- 4. Notifications -->
+      <details class="settings-section">
+        <summary class="settings-summary">Notifications</summary>
+        <div style="padding:12px 0 4px">
+          <div style="font-size:13px;color:var(--text3);margin-bottom:10px">Get alerts for key dynasty events.</div>
+          <button class="btn" onclick="enableNotifications()" id="notif-btn" style="padding:10px 18px;margin-bottom:6px">Enable notifications</button>
+          <div id="notif-status" class="status-txt"></div>
+        </div>
+      </details>
+
+      <!-- 5. Account + League -->
+      <details class="settings-section">
+        <summary class="settings-summary">
+          <span>Account</span>
+          <span id="s-user" style="font-size:13px;color:var(--text3);font-weight:400">—</span>
+        </summary>
+        <div style="padding:12px 0 4px">
+          <div style="display:flex;gap:8px">
+            <input type="text" id="s-user-in" placeholder="Change username" style="font-size:14px;flex:1;padding:10px 12px"/>
+            <button class="btn btn-ghost" onclick="reconnect()" style="padding:10px 14px">Reconnect</button>
+          </div>
+          <button class="btn btn-ghost" onclick="if(confirm('Disconnect from Sleeper? This clears saved data.')){localStorage.clear();sessionStorage.clear();location.reload();}" style="padding:8px 14px;margin-top:8px;color:var(--red);border-color:rgba(239,68,68,.3);font-size:13px;width:100%">Disconnect &amp; Clear Data</button>
+        </div>
+      </details>
+
+      <!-- 6. Data -->
+      <details class="settings-section">
+        <summary class="settings-summary">Data &amp; History</summary>
+        <div style="padding:12px 0 4px">
+          <div style="font-size:13px;color:var(--text3);margin-bottom:8px">Daily insights generate automatically when you open the app.</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="clearHistory()">Clear agent history</button>
+          </div>
+        </div>
+      </details>
+
+      <!-- Feedback -->
+      <div style="text-align:center;padding:16px 0 8px">
+        <a href="https://forms.gle/uruweMzTNV5ZCrj39" target="_blank" style="font-size:13px;color:var(--accent);text-decoration:none;font-weight:600">Send feedback</a>
+      </div>
+    </div>
+
+    <!-- ── LEAGUE PANEL ── -->
+    <div class="panel" id="panel-league">
+      <div id="panel-league-content">
+        <div style="text-align:center;padding:40px 20px;color:var(--text3)">
+          <div style="font-size:32px;margin-bottom:10px">🏈</div>
+          <div style="font-size:14px">Connect your league to see owner intelligence.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── FIELD LOG PANEL ── -->
+    <div class="panel" id="panel-fieldlog">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div>
+          <div style="font-size:18px;font-weight:800;letter-spacing:-.03em">GM Insights</div>
+          <div style="font-size:13px;color:var(--text3);margin-top:2px">Insights · Moves · Drift</div>
+        </div>
+        <span style="font-size:11px;color:var(--green);display:flex;align-items:center;gap:5px;font-weight:600;padding:4px 10px;background:var(--greenL);border-radius:20px;border:1px solid rgba(46,204,113,.2)">
+          <span style="width:5px;height:5px;border-radius:50%;background:var(--green);display:inline-block"></span>Synced
+        </span>
+      </div>
+      <div id="panel-fieldlog-content"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- GM Bar — Claude-style launcher that expands to take over ~70% of the viewport -->
+<div class="gm-bar-scrim" id="gm-bar-scrim" onclick="_gmBarCollapse()"></div>
+<div class="global-chat-overlay" id="global-chat-overlay">
+  <div class="gm-bar-panel">
+    <!-- Expanded body: launcher + Alex block + chips. Hidden when collapsed. -->
+    <div class="gm-bar-body">
+      <!-- Grab handle + close for expanded state -->
+      <div class="gm-bar-grab">
+        <div class="gm-bar-grab-handle"></div>
+        <button class="gm-bar-close" onclick="_gmBarCollapse()" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="gm-bar-alex-block" id="gm-bar-alex"></div>
+
+      <!-- Context prompt chips -->
+      <div class="ctx-chips-row" id="ctx-chips-row">
+        <!-- populated by scout-ui.js renderCtxChips() -->
+      </div>
+    </div>
+
+    <!-- Chat messages — lives inside the bar so conversation stays in-panel -->
+    <div id="gm-bar-msgs" style="display:none;flex:1;overflow-y:auto;padding:10px 14px;flex-direction:column;gap:8px"></div>
+
+    <!-- Unified search results dropdown (appears above chat input) -->
+    <div id="unified-search-results" style="display:none;max-height:240px;overflow-y:auto;background:var(--bg2);border:1px solid var(--border2);border-radius:12px 12px 0 0;margin-bottom:-1px;box-shadow:0 -4px 20px rgba(0,0,0,.25)"></div>
+
+    <!-- Chat input — pinned at the bottom of the panel, visible in both collapsed and expanded states -->
+    <div class="global-chat-row">
+      <input type="text" id="global-chat-in" class="global-chat-input" placeholder="Message Alex..." autocomplete="off"
+        onfocus="_gmBarExpand()"
+        oninput="handleUnifiedInput(this.value)"
+        onkeydown="if(event.key==='Enter')handleUnifiedEnter(event);if(event.key==='Escape'){this.value='';document.getElementById('unified-search-results').style.display='none';_gmBarCollapse();}"/>
+      <button class="global-chat-send" onclick="sendGlobalChat()" aria-label="Send">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile nav -->
+<div class="mobile-nav" id="mobile-nav">
+  <button class="mobile-nav-item active" id="mnav-home" onclick="mobileTab('digest',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19V5"/><path d="M4 5h8l1 3h7v9h-7l-1-3H4"/></svg>
+    Today
+  </button>
+  <button class="mobile-nav-item" id="mnav-team" onclick="mobileTab('team',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l8 4v5c0 5-3.4 8.2-8 9-4.6-.8-8-4-8-9V7l8-4z"/><path d="M8.5 12.5l2.3 2.3 4.7-5.2"/></svg>
+    Team
+  </button>
+  <button class="mobile-nav-item" id="mnav-tools" onclick="mobileTab('tools',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.1-3.1a6 6 0 01-7.9 7.9l-5.7 5.7a2.1 2.1 0 01-3-3l5.7-5.7a6 6 0 017.9-7.9l-3.1 3.1z"/></svg>
+    Tools
+  </button>
+  <button class="mobile-nav-item" id="mnav-portfolio" onclick="mobileTab('portfolio',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 20h8"/><path d="M12 18v2"/><path d="M7 9h4"/><path d="M7 13h2"/><path d="M14 9h3"/><path d="M14 13h3"/></svg>
+    Portfolio
+  </button>
+</div>
+
+<!-- Supabase CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.101.1/dist/umd/supabase.min.js"></script>
+
+<!-- App entry point (Vite bundles all modules) -->
+<script>window.DYNASTY_HQ_APP = 'reconai';</script>
+<script type="module" src="./js/landing-content.js"></script>
+<script type="module" src="./main.js"></script>
+
+<!-- Service Worker registration -->
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    const isLocalPreview=['localhost','127.0.0.1','::1'].includes(window.location.hostname);
+    if(isLocalPreview){
+      navigator.serviceWorker.getRegistrations().then(regs=>regs.forEach(reg=>reg.unregister())).catch(()=>{});
+      if(window.caches){
+        caches.keys()
+          .then(keys=>Promise.all(keys.filter(k=>k.startsWith('reconai-scout')).map(k=>caches.delete(k))))
+          .catch(()=>{});
+      }
+      return;
+    }
+    navigator.serviceWorker.register('./sw.js').then(reg=>{
+      console.log('[Scout] SW registered, scope:',reg.scope);
+      // Check for updates every 30 minutes
+      setInterval(()=>reg.update(),30*60*1000);
+      // When a new SW is waiting, tell it to activate
+      reg.addEventListener('updatefound',()=>{
+        const nw=reg.installing;
+        if(nw)nw.addEventListener('statechange',()=>{
+          if(nw.state==='installed'&&navigator.serviceWorker.controller){
+            console.log('[Scout] New version available');
+          }
+        });
+      });
+    }).catch(e=>console.warn('[Scout] SW registration failed:',e));
+    // Listen for the SW telling us it updated — show refresh banner
+    navigator.serviceWorker.addEventListener('message',e=>{
+      if(e.data?.type==='SW_UPDATED'){
+        const banner=document.createElement('div');
+        banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:linear-gradient(135deg,#d4af37,#b8941f);color:#0a0a0a;padding:12px 16px;font-size:14px;font-weight:600;text-align:center;display:flex;align-items:center;justify-content:center;gap:10px;font-family:system-ui,sans-serif';
+        banner.innerHTML='Scout has been updated. <button onclick="location.reload()" style="background:#0a0a0a;color:#d4af37;border:none;border-radius:6px;padding:6px 16px;font-weight:700;cursor:pointer;font-size:13px">Refresh Now</button>';
+        document.body.prepend(banner);
+      }
+    });
+  });
+}
+</script>
+
+<!-- PWA Install Prompt -->
+<div id="pwa-install" style="display:none;position:fixed;bottom:72px;left:50%;transform:translateX(-50%);max-width:340px;width:calc(100% - 32px);background:var(--bg2);border:1px solid var(--accent);border-radius:var(--rl);padding:12px 16px;z-index:300;box-shadow:0 8px 32px rgba(0,0,0,0.5)">
+  <div style="display:flex;align-items:center;gap:10px">
+    <img src="icons/icon-192.png" style="width:36px;height:36px;border-radius:8px" alt=""/>
+    <div style="flex:1">
+      <div style="font-size:14px;font-weight:700;color:var(--text)">Install Scout</div>
+      <div style="font-size:13px;color:var(--text3)">Add to your home screen for quick access</div>
+    </div>
+    <button id="pwa-install-btn" style="padding:6px 14px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Install</button>
+    <button id="pwa-install-dismiss" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px">&times;</button>
+  </div>
+</div>
+
+<script>
+// PWA Install Prompt
+let _deferredPrompt = null;
+function pwaInstallDismissedRecently() {
+  const dismissedRaw = localStorage.getItem('pwa_install_dismissed');
+  if (!dismissedRaw) return false;
+  const dismissed = parseInt(dismissedRaw, 10);
+  return Number.isFinite(dismissed) && Date.now() - dismissed < 7 * 24 * 60 * 60 * 1000;
+}
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  if (pwaInstallDismissedRecently()) return;
+  _deferredPrompt = e;
+  // Don't show immediately — wait 30 seconds
+  setTimeout(() => {
+    const banner = document.getElementById('pwa-install');
+    if (banner && _deferredPrompt) banner.style.display = 'block';
+  }, 30000);
+});
+
+document.getElementById('pwa-install-btn')?.addEventListener('click', async () => {
+  if (!_deferredPrompt) return;
+  _deferredPrompt.prompt();
+  const result = await _deferredPrompt.userChoice;
+  _deferredPrompt = null;
+  document.getElementById('pwa-install').style.display = 'none';
+});
+
+document.getElementById('pwa-install-dismiss')?.addEventListener('click', () => {
+  document.getElementById('pwa-install').style.display = 'none';
+  _deferredPrompt = null;
+  localStorage.setItem('pwa_install_dismissed', Date.now());
+});
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('pwa-install').style.display = 'none';
+  _deferredPrompt = null;
+});
+
+// Hide mobile nav when keyboard opens (iOS/Android)
+if (window.visualViewport) {
+  const syncKeyboardState = () => {
+    const vv = window.visualViewport;
+    const focused = document.activeElement;
+    const acceptsText = focused && /^(INPUT|TEXTAREA|SELECT)$/.test(focused.tagName);
+    const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    const kbOpen = acceptsText && offset > 80;
+    document.documentElement.style.setProperty('--keyboard-offset', kbOpen ? `${Math.round(offset)}px` : '0px');
+    document.body.classList.toggle('keyboard-open', kbOpen);
+  };
+  window.visualViewport.addEventListener('resize', syncKeyboardState);
+  window.visualViewport.addEventListener('scroll', syncKeyboardState);
+  document.addEventListener('focusin', () => setTimeout(syncKeyboardState, 60));
+  document.addEventListener('focusout', () => setTimeout(syncKeyboardState, 80));
+}
+</script>
+
+<!-- Trial Expiration Modal — shown once on next load after 30-day trial ends -->
+<div id="trial-expired-modal" class="trial-expired-overlay" style="display:none">
+  <div class="trial-expired-sheet">
+    <div class="trial-expired-header">
+      <div style="font-size:36px;margin-bottom:12px">⏱</div>
+      <div style="font-size:20px;font-weight:800;letter-spacing:-.03em;margin-bottom:8px">Your trial has ended</div>
+      <div style="font-size:14px;color:var(--text3);line-height:1.5">Upgrade to keep AI trade analysis, Owner DNA, draft intelligence, and daily briefings.</div>
+    </div>
+    <div class="trial-expired-recap">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Your 30-day recap</div>
+      <div id="trial-expired-stats"></div>
+    </div>
+    <div style="margin-bottom:20px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">After trial</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2)"><span style="color:var(--red);font-size:11px;font-weight:700">✕</span> AI trade analysis &amp; Scout chat</div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2)"><span style="color:var(--red);font-size:11px;font-weight:700">✕</span> Owner DNA profiles</div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2)"><span style="color:var(--red);font-size:11px;font-weight:700">✕</span> Draft room intelligence</div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2)"><span style="color:var(--red);font-size:11px;font-weight:700">✕</span> Daily briefings</div>
+      </div>
+    </div>
+    <button class="btn" style="width:100%;padding:13px;font-size:15px;font-weight:700;border-radius:12px;margin-bottom:8px;background:linear-gradient(135deg,#d4af37,#b8941f);box-shadow:0 4px 16px rgba(212,175,55,.25)" onclick="closeTrialExpiredModal();showProLaunchPage()">Upgrade to War Room — $9.99/mo</button>
+    <button class="btn btn-ghost" style="width:100%;padding:11px;font-size:14px;border-radius:12px" onclick="closeTrialExpiredModal()">Continue with free</button>
+  </div>
+</div>
+
+<!-- OAuth auth state: check session on load, update header badge + settings, hide sign-in buttons if signed in -->
+<script>
+(function initOAuthState() {
+  async function updateAuthUI(user) {
+    const badge = document.getElementById('auth-user-badge');
+    const oauthSection = document.getElementById('oauth-signin-section');
+    const settingsSection = document.getElementById('settings-account-section');
+    const settingsEmail = document.getElementById('settings-account-email');
+    const label = user?.email || user?.user_metadata?.name || user?.user_metadata?.full_name || '';
+    if (user && label) {
+      if (badge) { badge.textContent = label; badge.style.display = ''; }
+      if (oauthSection) oauthSection.style.display = 'none';
+      if (settingsSection) settingsSection.style.display = '';
+      if (settingsEmail) settingsEmail.textContent = label;
+    } else {
+      if (badge) badge.style.display = 'none';
+      if (oauthSection) oauthSection.style.display = '';
+      if (settingsSection) settingsSection.style.display = 'none';
+    }
+  }
+
+  // Wait for Supabase client to be ready, then check session
+  document.addEventListener('DOMContentLoaded', async () => {
+    try {
+      if (!window.OD?.getOAuthSession) return;
+      const session = await window.OD.getOAuthSession();
+      await updateAuthUI(session?.user || null);
+      // Also listen for auth state changes (handles OAuth redirect callback)
+      const client = window.OD.supabase;
+      if (client?.auth?.onAuthStateChange) {
+        client.auth.onAuthStateChange((_event, session) => {
+          updateAuthUI(session?.user || null);
+        });
+      }
+    } catch (e) { console.warn('[Scout] OAuth state check failed:', e); }
+  });
+})();
+</script>
+
+</body></html>

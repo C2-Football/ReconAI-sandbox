@@ -1,0 +1,48 @@
+{
+  "table": "public.field_log",
+  "columns": {
+    "id": { "type": "uuid" },
+    "client_id": { "type": "text" },
+    "username": { "type": "text" },
+    "league_id": { "type": "text" },
+    "ts": { "type": "bigint" },
+    "category": { "type": "text" },
+    "action_type": { "type": "text" },
+    "players": { "type": "jsonb" },
+    "context": { "type": "text" },
+    "icon": { "type": "text" },
+    "text": { "type": "text" },
+    "source": { "type": "text" },
+    "created_at": { "type": "timestamptz" }
+  },
+  "writeColumns": [
+    "client_id",
+    "username",
+    "league_id",
+    "ts",
+    "category",
+    "action_type",
+    "players",
+    "context",
+    "icon",
+    "text",
+    "source"
+  ],
+  "readColumns": [
+    "id",
+    "client_id",
+    "league_id",
+    "ts",
+    "category",
+    "action_type",
+    "players",
+    "context",
+    "icon",
+    "text",
+    "source",
+    "created_at"
+  ],
+  "unique": ["client_id"],
+  "indexes": ["field_log_username_ts_idx", "field_log_league_ts_idx"],
+  "deprecatedCreateColumns": ["user_id", "event_type", "payload"]
+}

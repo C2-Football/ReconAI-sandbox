@@ -1,0 +1,60 @@
+{
+  "name": "reconai",
+  "version": "1.0.0",
+  "description": "",
+  "main": "sw.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "npm run test:unit && npm run test:schema && npm run test:rls && npm run test:proxy-cors && npm run test:bug-capture && npm run test:ai && npm run test:dhq && npm run test:intelligence && npm run test:landing-content && npm run test:rookies && npm run test:analytics && npm run test:tutorial && npm run test:alex-evals",
+    "test:unit": "node tests/unit.js",
+    "test:schema": "node tests/schema-health.js",
+    "test:rls": "node tests/rls-contract.js",
+    "test:proxy-cors": "node tests/proxy-cors-contract.js",
+    "test:bug-capture": "node tests/bug-capture-contract.js",
+    "test:ai": "node tests/ai-routing.js",
+    "test:dhq": "node tests/dhq-sanity-tests.js",
+    "test:intelligence": "node tests/intelligence-context-contract.js",
+    "test:landing-content": "node tests/landing-content-contract.js",
+    "test:rookies": "node tests/rookie-data-contract.js",
+    "test:analytics": "node tests/analytics-contract.js",
+    "test:tutorial": "node tests/tutorial-contract.js",
+    "test:alex-evals": "node tests/alex-evals.js",
+    "dhq:audit": "node scripts/dhq-fc-audit.cjs",
+    "dhq:lab": "node scripts/dhq-value-lab.cjs",
+    "dhq:playground": "vite --host 0.0.0.0",
+    "prepare": "husky",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "vite",
+    "landing:edit": "node scripts/serve-static.cjs --port=3012 --open=landing-editor.html",
+    "verify:deploy": "node scripts/verify-deploy-readiness.cjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jcc100218/ReconAI.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/jcc100218/ReconAI/issues"
+  },
+  "homepage": "https://github.com/jcc100218/ReconAI#readme",
+  "lint-staged": {
+    "*.js": [
+      "eslint --fix",
+      "eslint"
+    ]
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.2.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "vite": "^8.0.9"
+  }
+}

@@ -1,0 +1,1912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scout Mobile Mockups</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #070708;
+      --panel: #121317;
+      --panel-2: #19191e;
+      --panel-3: #202127;
+      --gold: #d6b944;
+      --gold-2: #f1d66a;
+      --green: #45d282;
+      --red: #ef604f;
+      --blue: #68a6ff;
+      --violet: #8f7bff;
+      --cyan: #4fd1d9;
+      --ink: #f6f3ea;
+      --muted: #a5a2a0;
+      --soft: #6f6d73;
+      --line: rgba(214, 185, 68, .16);
+      --line-2: rgba(255, 255, 255, .09);
+      --shadow: 0 24px 80px rgba(0, 0, 0, .45);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(180deg, #09090b 0%, #050506 55%, #0b0a08 100%);
+      color: var(--ink);
+      font-family: "DM Sans", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    .page {
+      width: min(1600px, calc(100vw - 48px));
+      margin: 0 auto;
+      padding: 34px 0 56px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 26px;
+    }
+
+    .eyebrow {
+      color: var(--gold);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 7px 0 8px;
+      font-size: clamp(34px, 4vw, 58px);
+      line-height: .96;
+      letter-spacing: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .subtitle {
+      margin: 0;
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.5;
+    }
+
+    .principles {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      width: min(640px, 100%);
+    }
+
+    .principle {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, .025);
+    }
+
+    .principle strong {
+      display: block;
+      color: var(--ink);
+      font-size: 13px;
+      letter-spacing: .02em;
+      margin-bottom: 2px;
+    }
+
+    .principle span {
+      color: var(--soft);
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    .mock-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(280px, 1fr));
+      gap: 24px;
+      align-items: start;
+    }
+
+    .concept {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .concept-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 42px;
+    }
+
+    .concept-label h2 {
+      margin: 0;
+      font-size: 14px;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: .13em;
+    }
+
+    .concept-label p {
+      margin: 0;
+      color: var(--soft);
+      font-size: 12px;
+      text-align: right;
+      line-height: 1.25;
+    }
+
+    .phone {
+      width: 100%;
+      aspect-ratio: 390 / 844;
+      min-height: 720px;
+      border: 1px solid rgba(214, 185, 68, .25);
+      border-radius: 34px;
+      background: #050506;
+      box-shadow: var(--shadow), inset 0 0 0 8px #0a0a0c;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .screen {
+      position: absolute;
+      inset: 8px;
+      border-radius: 26px;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    .status {
+      height: 36px;
+      padding: 10px 19px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--muted);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11px;
+      background: rgba(255, 255, 255, .015);
+    }
+
+    .appbar {
+      height: 58px;
+      padding: 0 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .mark {
+      width: 29px;
+      height: 29px;
+      border: 1px solid rgba(214, 185, 68, .7);
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      color: var(--gold-2);
+      font-weight: 900;
+      font-size: 13px;
+      background: #17150e;
+    }
+
+    .app-title {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .app-title strong {
+      display: block;
+      font-size: 17px;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    .app-title span {
+      color: var(--soft);
+      font-size: 12px;
+    }
+
+    .avatar {
+      width: 29px;
+      height: 29px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #2a2411;
+      color: var(--gold);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .content {
+      height: calc(100% - 36px - 58px - 76px);
+      overflow: hidden;
+      padding: 16px;
+    }
+
+    .nav {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 76px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border-top: 1px solid var(--line);
+      background: rgba(12, 12, 14, .95);
+      backdrop-filter: blur(18px);
+    }
+
+    .nav button {
+      color: var(--soft);
+      background: none;
+      border: 0;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      letter-spacing: 0;
+    }
+
+    .nav button span:first-child {
+      font-size: 19px;
+      line-height: 1;
+    }
+
+    .nav .active {
+      color: var(--gold);
+    }
+
+    .section-kicker {
+      color: var(--gold);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      margin-bottom: 7px;
+    }
+
+    .hero-card {
+      border: 1px solid rgba(214, 185, 68, .22);
+      border-radius: 14px;
+      padding: 14px;
+      background: linear-gradient(180deg, rgba(214, 185, 68, .08), rgba(255, 255, 255, .025));
+      margin-bottom: 12px;
+    }
+
+    .hero-card h3 {
+      margin: 0;
+      font-size: 23px;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .hero-card p {
+      margin: 9px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.42;
+    }
+
+    .decision-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 0;
+      border-top: 1px solid var(--line-2);
+    }
+
+    .decision-row:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .decision-row strong {
+      display: block;
+      font-size: 14px;
+      line-height: 1.15;
+      margin-bottom: 3px;
+    }
+
+    .decision-row span {
+      display: block;
+      color: var(--soft);
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 50px;
+      border-radius: 999px;
+      padding: 5px 8px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11px;
+      font-weight: 800;
+      border: 1px solid var(--line-2);
+      color: var(--muted);
+    }
+
+    .pill.green { color: var(--green); border-color: rgba(69, 210, 130, .28); background: rgba(69, 210, 130, .09); }
+    .pill.red { color: var(--red); border-color: rgba(239, 96, 79, .28); background: rgba(239, 96, 79, .09); }
+    .pill.blue { color: var(--blue); border-color: rgba(104, 166, 255, .28); background: rgba(104, 166, 255, .09); }
+    .pill.gold { color: var(--gold); border-color: rgba(214, 185, 68, .28); background: rgba(214, 185, 68, .09); }
+    .pill.violet { color: var(--violet); border-color: rgba(143, 123, 255, .28); background: rgba(143, 123, 255, .09); }
+
+    .card {
+      border: 1px solid var(--line-2);
+      border-radius: 12px;
+      background: var(--panel);
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 9px;
+    }
+
+    .card-title strong {
+      font-size: 14px;
+      line-height: 1.15;
+    }
+
+    .card-title span {
+      color: var(--soft);
+      font-size: 12px;
+    }
+
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 11px;
+    }
+
+    .metric {
+      padding: 9px;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, .035);
+      border: 1px solid var(--line-2);
+    }
+
+    .metric b {
+      display: block;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 16px;
+      line-height: 1.1;
+    }
+
+    .metric span {
+      color: var(--soft);
+      font-size: 10px;
+      line-height: 1.15;
+    }
+
+    .chat-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .bubble {
+      max-width: 88%;
+      border-radius: 16px;
+      padding: 11px 12px;
+      font-size: 13px;
+      line-height: 1.42;
+    }
+
+    .bubble.user {
+      align-self: flex-end;
+      color: #15120a;
+      background: var(--gold);
+      border-bottom-right-radius: 5px;
+      font-weight: 700;
+    }
+
+    .bubble.ai {
+      align-self: flex-start;
+      background: var(--panel-2);
+      border: 1px solid var(--line-2);
+      border-bottom-left-radius: 5px;
+      color: var(--ink);
+    }
+
+    .artifact {
+      border: 1px solid rgba(69, 210, 130, .25);
+      background: rgba(69, 210, 130, .06);
+      border-radius: 13px;
+      padding: 12px;
+      margin-top: 2px;
+    }
+
+    .artifact-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: start;
+      margin-bottom: 10px;
+    }
+
+    .artifact-head strong {
+      display: block;
+      font-size: 14px;
+    }
+
+    .artifact-head span {
+      display: block;
+      color: var(--soft);
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .btn {
+      height: 34px;
+      border: 0;
+      border-radius: 9px;
+      padding: 0 11px;
+      font-family: inherit;
+      font-weight: 900;
+      font-size: 12px;
+      background: var(--gold);
+      color: #15120a;
+    }
+
+    .btn.secondary {
+      background: rgba(255, 255, 255, .06);
+      color: var(--muted);
+      border: 1px solid var(--line-2);
+    }
+
+    .prompt-bar {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 88px;
+      min-height: 46px;
+      border: 1px solid rgba(214, 185, 68, .25);
+      border-radius: 999px;
+      background: #151419;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 7px 7px 15px;
+      color: var(--soft);
+      font-size: 13px;
+      box-shadow: 0 12px 34px rgba(0, 0, 0, .4);
+    }
+
+    .send {
+      margin-left: auto;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: #111;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+    }
+
+    .tool-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .tool {
+      min-height: 96px;
+      border-radius: 13px;
+      border: 1px solid var(--line-2);
+      background: var(--panel);
+      padding: 11px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .tool-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: rgba(255, 255, 255, .06);
+      color: var(--gold);
+      font-size: 15px;
+    }
+
+    .tool strong {
+      display: block;
+      font-size: 13px;
+      line-height: 1.15;
+    }
+
+    .tool span {
+      color: var(--soft);
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .artifact-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .artifact-row {
+      display: grid;
+      grid-template-columns: 35px 1fr auto;
+      gap: 9px;
+      align-items: center;
+      padding: 10px;
+      border-radius: 12px;
+      background: var(--panel);
+      border: 1px solid var(--line-2);
+    }
+
+    .mini-icon {
+      width: 35px;
+      height: 35px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: rgba(214, 185, 68, .09);
+      color: var(--gold);
+      font-weight: 900;
+    }
+
+    .artifact-row strong {
+      display: block;
+      font-size: 13px;
+      line-height: 1.15;
+    }
+
+    .artifact-row span {
+      color: var(--soft);
+      font-size: 11px;
+      line-height: 1.25;
+    }
+
+    .lineup-card {
+      border: 1px solid rgba(104, 166, 255, .22);
+      background: rgba(104, 166, 255, .055);
+      border-radius: 14px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .player-match {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 8px;
+      align-items: center;
+      margin: 10px 0;
+    }
+
+    .player {
+      padding: 9px;
+      border-radius: 11px;
+      border: 1px solid var(--line-2);
+      background: #15161b;
+    }
+
+    .player.start {
+      border-color: rgba(69, 210, 130, .32);
+      background: rgba(69, 210, 130, .07);
+    }
+
+    .player b {
+      display: block;
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .player span {
+      color: var(--soft);
+      font-size: 10px;
+    }
+
+    .versus {
+      color: var(--soft);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11px;
+    }
+
+    .bars {
+      display: grid;
+      gap: 7px;
+      margin-top: 9px;
+    }
+
+    .bar {
+      display: grid;
+      grid-template-columns: 74px 1fr 36px;
+      gap: 7px;
+      align-items: center;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .track {
+      height: 6px;
+      border-radius: 99px;
+      background: rgba(255, 255, 255, .08);
+      overflow: hidden;
+    }
+
+    .fill {
+      height: 100%;
+      border-radius: inherit;
+      background: var(--green);
+    }
+
+    .fill.blue { background: var(--blue); }
+    .fill.red { background: var(--red); }
+    .fill.gold { background: var(--gold); }
+
+    .depth-intro {
+      margin: 46px 0 18px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 520px);
+      gap: 24px;
+      align-items: end;
+      border-top: 1px solid var(--line);
+      padding-top: 28px;
+    }
+
+    .depth-intro h2 {
+      margin: 7px 0 7px;
+      font-size: clamp(28px, 3vw, 42px);
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+
+    .depth-intro p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.5;
+      max-width: 760px;
+    }
+
+    .depth-note {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(214, 185, 68, .045);
+      padding: 13px 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      padding: 4px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, .045);
+      border: 1px solid var(--line-2);
+      margin-bottom: 12px;
+    }
+
+    .segmented span {
+      text-align: center;
+      border-radius: 9px;
+      padding: 7px 4px;
+      color: var(--soft);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .segmented .on {
+      background: var(--gold);
+      color: #17120a;
+    }
+
+    .workspace-card {
+      border: 1px solid var(--line-2);
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, .055), rgba(255, 255, 255, .025));
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .workspace-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .workspace-head strong {
+      display: block;
+      font-size: 15px;
+      line-height: 1.1;
+    }
+
+    .workspace-head span {
+      display: block;
+      margin-top: 3px;
+      color: var(--soft);
+      font-size: 11px;
+      line-height: 1.25;
+    }
+
+    .asset-lanes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .asset-lane {
+      border: 1px solid var(--line-2);
+      border-radius: 12px;
+      background: rgba(0, 0, 0, .14);
+      padding: 9px;
+      min-height: 98px;
+    }
+
+    .asset-lane h4 {
+      margin: 0 0 7px;
+      color: var(--soft);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+    }
+
+    .asset-chip {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      border-radius: 8px;
+      padding: 7px 8px;
+      background: rgba(255, 255, 255, .055);
+      margin-top: 5px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .asset-chip em {
+      color: var(--soft);
+      font-style: normal;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 10px;
+    }
+
+    .signal-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .signal {
+      border: 1px solid var(--line-2);
+      border-radius: 10px;
+      padding: 9px;
+      background: rgba(255, 255, 255, .035);
+    }
+
+    .signal b {
+      display: block;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 15px;
+    }
+
+    .signal span {
+      color: var(--soft);
+      font-size: 10px;
+      line-height: 1.15;
+    }
+
+    .mini-board {
+      display: grid;
+      grid-template-columns: 28px 1fr 48px;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 0;
+      border-top: 1px solid var(--line-2);
+    }
+
+    .mini-board:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .rank {
+      font-family: "JetBrains Mono", monospace;
+      color: var(--gold);
+      font-size: 12px;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .prospect strong {
+      display: block;
+      font-size: 13px;
+      line-height: 1.1;
+    }
+
+    .prospect span {
+      display: block;
+      color: var(--soft);
+      font-size: 10px;
+      margin-top: 2px;
+    }
+
+    .draft-track {
+      display: flex;
+      gap: 6px;
+      margin: 9px 0 11px;
+    }
+
+    .pick-dot {
+      flex: 1;
+      min-width: 0;
+      border-radius: 8px;
+      padding: 7px 4px;
+      background: rgba(255, 255, 255, .055);
+      border: 1px solid var(--line-2);
+      color: var(--soft);
+      text-align: center;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .pick-dot.mine {
+      background: rgba(214, 185, 68, .14);
+      border-color: rgba(214, 185, 68, .35);
+      color: var(--gold);
+    }
+
+    .pick-dot.trade {
+      background: rgba(69, 210, 130, .1);
+      border-color: rgba(69, 210, 130, .3);
+      color: var(--green);
+    }
+
+    .waiver-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 9px 0;
+      border-top: 1px solid var(--line-2);
+    }
+
+    .waiver-row:first-child {
+      border-top: 0;
+    }
+
+    .waiver-row strong {
+      display: block;
+      font-size: 13px;
+      line-height: 1.15;
+    }
+
+    .waiver-row span {
+      display: block;
+      color: var(--soft);
+      font-size: 10px;
+      margin-top: 2px;
+    }
+
+    .stacked-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .mini-action {
+      border: 1px solid var(--line-2);
+      border-radius: 10px;
+      padding: 9px;
+      background: rgba(255, 255, 255, .035);
+    }
+
+    .mini-action strong {
+      display: block;
+      font-size: 12px;
+    }
+
+    .mini-action span {
+      display: block;
+      color: var(--soft);
+      font-size: 10px;
+      line-height: 1.2;
+      margin-top: 2px;
+    }
+
+    .team-hero {
+      border: 1px solid rgba(214, 185, 68, .24);
+      border-radius: 15px;
+      background:
+        radial-gradient(circle at 18% 0%, rgba(214, 185, 68, .16), transparent 40%),
+        linear-gradient(180deg, rgba(255, 255, 255, .055), rgba(255, 255, 255, .02));
+      padding: 13px;
+      margin-bottom: 10px;
+    }
+
+    .team-hero-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .team-hero-top strong {
+      display: block;
+      font-size: 16px;
+      line-height: 1.1;
+    }
+
+    .team-hero-top span {
+      display: block;
+      color: var(--soft);
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
+    .team-score {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      border: 5px solid rgba(239, 96, 79, .78);
+      color: var(--red);
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 900;
+      font-size: 16px;
+      background: rgba(0, 0, 0, .25);
+    }
+
+    .room-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .room-card {
+      border: 1px solid var(--line-2);
+      border-radius: 11px;
+      padding: 9px;
+      background: rgba(255, 255, 255, .035);
+      min-height: 72px;
+    }
+
+    .room-card strong {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+      line-height: 1.1;
+    }
+
+    .room-card small {
+      display: block;
+      color: var(--soft);
+      font-size: 10px;
+      line-height: 1.25;
+      margin-top: 6px;
+    }
+
+    .room-meter {
+      height: 5px;
+      border-radius: 99px;
+      background: rgba(255, 255, 255, .09);
+      overflow: hidden;
+      margin-top: 7px;
+    }
+
+    .room-meter div {
+      height: 100%;
+      border-radius: inherit;
+      background: var(--green);
+    }
+
+    .league-strip {
+      display: flex;
+      gap: 7px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .league-token {
+      min-width: 86px;
+      border: 1px solid var(--line-2);
+      border-radius: 12px;
+      padding: 8px;
+      background: rgba(255, 255, 255, .035);
+    }
+
+    .league-token.active {
+      background: rgba(214, 185, 68, .12);
+      border-color: rgba(214, 185, 68, .36);
+    }
+
+    .league-token strong {
+      display: block;
+      color: var(--ink);
+      font-size: 11px;
+      line-height: 1.1;
+    }
+
+    .league-token span {
+      display: block;
+      color: var(--soft);
+      font-size: 10px;
+      margin-top: 3px;
+    }
+
+    .portfolio-row {
+      display: grid;
+      grid-template-columns: 40px 1fr auto;
+      gap: 9px;
+      align-items: center;
+      padding: 10px;
+      border-radius: 13px;
+      background: var(--panel);
+      border: 1px solid var(--line-2);
+      margin-bottom: 8px;
+    }
+
+    .league-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: rgba(214, 185, 68, .09);
+      color: var(--gold);
+      font-family: "JetBrains Mono", monospace;
+      font-weight: 900;
+      font-size: 12px;
+    }
+
+    .portfolio-row strong {
+      display: block;
+      font-size: 13px;
+      line-height: 1.15;
+    }
+
+    .portfolio-row span {
+      display: block;
+      color: var(--soft);
+      font-size: 10px;
+      line-height: 1.25;
+      margin-top: 2px;
+    }
+
+    .action-stack {
+      display: grid;
+      gap: 8px;
+    }
+
+    .cross-action {
+      border: 1px solid var(--line-2);
+      border-radius: 13px;
+      background: var(--panel);
+      padding: 10px;
+    }
+
+    .cross-action-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 9px;
+      margin-bottom: 7px;
+    }
+
+    .cross-action strong {
+      display: block;
+      font-size: 13px;
+      line-height: 1.15;
+    }
+
+    .cross-action span {
+      color: var(--soft);
+      font-size: 10px;
+      line-height: 1.25;
+    }
+
+    .league-tags {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin-top: 7px;
+    }
+
+    .league-tags span {
+      border: 1px solid var(--line-2);
+      border-radius: 999px;
+      padding: 3px 7px;
+      background: rgba(255, 255, 255, .035);
+      color: var(--soft);
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    @media (max-width: 1280px) {
+      .topbar { align-items: start; flex-direction: column; }
+      .mock-grid { grid-template-columns: repeat(2, minmax(280px, 1fr)); }
+      .depth-intro { grid-template-columns: 1fr; }
+      .phone { min-height: 690px; }
+    }
+
+    @media (max-width: 720px) {
+      .page { width: min(420px, calc(100vw - 24px)); padding-top: 20px; }
+      h1 { font-size: 27px; line-height: 1.07; }
+      .subtitle { font-size: 15px; }
+      .principles { grid-template-columns: 1fr; }
+      .mock-grid { grid-template-columns: 1fr; }
+      .depth-intro h2 { font-size: 25px; }
+      .phone { min-height: auto; }
+      .concept-label { min-height: 0; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">Scout Mobile Direction</div>
+        <h1>AI-first fantasy command.</h1>
+        <p class="subtitle">These are rough product mockups for Scout as the mobile LLM layer of War Room: fast decisions on the phone, structured outputs that can be reopened later on desktop.</p>
+      </div>
+      <div class="principles">
+        <div class="principle"><strong>Ask</strong><span>Chat is the primary control surface.</span></div>
+        <div class="principle"><strong>Decide</strong><span>Every screen pushes toward one clear action.</span></div>
+        <div class="principle"><strong>Save</strong><span>Outputs become reusable artifacts.</span></div>
+        <div class="principle"><strong>Resume</strong><span>War Room picks up the deep work.</span></div>
+      </div>
+    </header>
+
+    <section class="mock-grid">
+      <article class="concept">
+        <div class="concept-label">
+          <h2>A. Daily Operator</h2>
+          <p>Default home screen</p>
+        </div>
+        <div class="phone">
+          <div class="screen">
+            <div class="status"><span>9:41</span><span>5G  84%</span></div>
+            <div class="appbar">
+              <div class="mark">S</div>
+              <div class="app-title"><strong>Scout</strong><span>Pontiac Aztek Racing Club</span></div>
+              <div class="avatar">BL</div>
+            </div>
+            <div class="content">
+              <div class="section-kicker">Today's Read</div>
+              <div class="hero-card">
+                <h3>Two moves matter before kickoff.</h3>
+                <p>Your WR room is thin for Week 8, but the bigger edge is replacing a low-floor flex and saving trade ammo for DB depth.</p>
+                <div class="metric-strip">
+                  <div class="metric"><b style="color:var(--red)">-7.4</b><span>lineup risk</span></div>
+                  <div class="metric"><b style="color:var(--gold)">61</b><span>team DHQ rank</span></div>
+                  <div class="metric"><b style="color:var(--green)">$23</b><span>FAAB edge</span></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="decision-row">
+                  <div><strong>Start Josh Downs</strong><span>Higher catch floor than Tucker; matchup grades 20% better.</span></div>
+                  <div class="pill green">+2.1</div>
+                </div>
+                <div class="decision-row">
+                  <div><strong>Bid $4-7 on Jalin Hyatt</strong><span>WR need, age fit, low league competition.</span></div>
+                  <div class="pill gold">FAAB</div>
+                </div>
+                <div class="decision-row">
+                  <div><strong>Shop Aaron Rodgers</strong><span>Value-window risk; two QB-needy teams have picks.</span></div>
+                  <div class="pill red">SELL</div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-title"><strong>Saved from War Room</strong><span>3 open</span></div>
+                <div class="decision-row">
+                  <div><strong>Trade package vs iMacduff</strong><span>Walker + 2027 2nd for WR upgrade</span></div>
+                  <div class="pill blue">72%</div>
+                </div>
+              </div>
+            </div>
+            <div class="prompt-bar">Ask Scout what to do next <div class="send">↑</div></div>
+            <nav class="nav">
+              <button class="active"><span>⌂</span><span>Today</span></button>
+              <button><span>◇</span><span>Tools</span></button>
+              <button><span>▤</span><span>Saved</span></button>
+              <button><span>◎</span><span>League</span></button>
+            </nav>
+          </div>
+        </div>
+      </article>
+
+      <article class="concept">
+        <div class="concept-label">
+          <h2>B. Ask + Artifact</h2>
+          <p>LLM result becomes structured data</p>
+        </div>
+        <div class="phone">
+          <div class="screen">
+            <div class="status"><span>9:42</span><span>5G  84%</span></div>
+            <div class="appbar">
+              <div class="mark">S</div>
+              <div class="app-title"><strong>Ask Scout</strong><span>League-aware assistant</span></div>
+              <div class="avatar">AI</div>
+            </div>
+            <div class="content">
+              <div class="chat-stack">
+                <div class="bubble user">Should I send Kenneth Walker for Kyler and a 3rd?</div>
+                <div class="bubble ai">Yes, but only if you can keep the 2026 2nd. It fixes your QB window and moves DHQ into a harder-to-replace position.</div>
+                <div class="artifact">
+                  <div class="artifact-head">
+                    <div>
+                      <strong>Trade Read Saved</strong>
+                      <span>Walker ⇄ Kyler + 2026 3rd</span>
+                    </div>
+                    <div class="pill green">B+</div>
+                  </div>
+                  <div class="metric-strip">
+                    <div class="metric"><b style="color:var(--green)">+840</b><span>value delta</span></div>
+                    <div class="metric"><b style="color:var(--blue)">64%</b><span>acceptance</span></div>
+                    <div class="metric"><b style="color:var(--gold)">QB</b><span>room swing</span></div>
+                  </div>
+                  <div class="button-row">
+                    <button class="btn">Save to War Room</button>
+                    <button class="btn secondary">Load calc</button>
+                  </div>
+                </div>
+                <div class="bubble ai">Biggest reason they accept: they have QB surplus and need RB points now. Biggest caution: Walker is still your cleanest weekly RB floor.</div>
+              </div>
+            </div>
+            <div class="prompt-bar">Ask follow-up or compare another deal <div class="send">↑</div></div>
+            <nav class="nav">
+              <button><span>⌂</span><span>Today</span></button>
+              <button class="active"><span>✦</span><span>Ask</span></button>
+              <button><span>▤</span><span>Saved</span></button>
+              <button><span>◎</span><span>League</span></button>
+            </nav>
+          </div>
+        </div>
+      </article>
+
+      <article class="concept">
+        <div class="concept-label">
+          <h2>C. Tools + Library</h2>
+          <p>Fast mobile utilities, not desktop clones</p>
+        </div>
+        <div class="phone">
+          <div class="screen">
+            <div class="status"><span>9:43</span><span>5G  84%</span></div>
+            <div class="appbar">
+              <div class="mark">S</div>
+              <div class="app-title"><strong>Scout Tools</strong><span>Mobile decisions + saved work</span></div>
+              <div class="avatar">BL</div>
+            </div>
+            <div class="content">
+              <div class="section-kicker">Quick Actions</div>
+              <div class="tool-grid">
+                <div class="tool"><div class="tool-icon">⇄</div><div><strong>Trade Check</strong><span>Players, picks, FAAB, acceptance.</span></div></div>
+                <div class="tool"><div class="tool-icon">☆</div><div><strong>Mock Pick</strong><span>Run one pick or a mini path.</span></div></div>
+                <div class="tool"><div class="tool-icon">$</div><div><strong>Waiver Bid</strong><span>Bid range and drop advice.</span></div></div>
+                <div class="tool"><div class="tool-icon">✓</div><div><strong>Start/Sit</strong><span>Weekly lineup call.</span></div></div>
+              </div>
+
+              <div class="section-kicker">Saved Artifacts</div>
+              <div class="artifact-list">
+                <div class="artifact-row">
+                  <div class="mini-icon">T</div>
+                  <div><strong>Kyler trade read</strong><span>Saved today · opens in Trade Center</span></div>
+                  <div class="pill green">B+</div>
+                </div>
+                <div class="artifact-row">
+                  <div class="mini-icon">D</div>
+                  <div><strong>2026 2.01 mock path</strong><span>4 outcomes · opens in Draft Room</span></div>
+                  <div class="pill blue">4</div>
+                </div>
+                <div class="artifact-row">
+                  <div class="mini-icon">W</div>
+                  <div><strong>Week 8 waiver plan</strong><span>Hyatt $4-7 · drop Johnson</span></div>
+                  <div class="pill gold">$7</div>
+                </div>
+                <div class="artifact-row">
+                  <div class="mini-icon">S</div>
+                  <div><strong>Downs over Tucker</strong><span>Lineup call · 72% confidence</span></div>
+                  <div class="pill violet">72%</div>
+                </div>
+              </div>
+            </div>
+            <div class="prompt-bar">Create a new Scout artifact <div class="send">＋</div></div>
+            <nav class="nav">
+              <button><span>⌂</span><span>Today</span></button>
+              <button class="active"><span>◇</span><span>Tools</span></button>
+              <button><span>▤</span><span>Saved</span></button>
+              <button><span>◎</span><span>League</span></button>
+            </nav>
+          </div>
+        </div>
+      </article>
+
+      <article class="concept">
+        <div class="concept-label">
+          <h2>D. Redraft Ready</h2>
+          <p>Future weekly football mode</p>
+        </div>
+        <div class="phone">
+          <div class="screen">
+            <div class="status"><span>Sun 11:18</span><span>5G  82%</span></div>
+            <div class="appbar">
+              <div class="mark">S</div>
+              <div class="app-title"><strong>Game Day</strong><span>Week 8 lineup decisions</span></div>
+              <div class="avatar">RD</div>
+            </div>
+            <div class="content">
+              <div class="section-kicker">Start/Sit Board</div>
+              <div class="lineup-card">
+                <div class="card-title"><strong>Flex decision</strong><span>lock by 12:00</span></div>
+                <div class="player-match">
+                  <div class="player start"><b>Josh Downs</b><span>vs HOU · 13.4 proj</span></div>
+                  <div class="versus">VS</div>
+                  <div class="player"><b>Tre Tucker</b><span>at KC · 10.9 proj</span></div>
+                </div>
+                <div class="pill green">Start Downs · +2.5 pts</div>
+                <p style="color:var(--muted);font-size:12px;line-height:1.35;margin:10px 0 0">Downs has the cleaner target floor and KC forces more low-depth throws to slot receivers.</p>
+              </div>
+              <div class="card">
+                <div class="card-title"><strong>Opponent pressure</strong><span>projected edge</span></div>
+                <div class="bars">
+                  <div class="bar"><span>QB</span><div class="track"><div class="fill blue" style="width:58%"></div></div><b>+1.2</b></div>
+                  <div class="bar"><span>RB</span><div class="track"><div class="fill red" style="width:35%"></div></div><b>-4.8</b></div>
+                  <div class="bar"><span>WR</span><div class="track"><div class="fill green" style="width:66%"></div></div><b>+2.9</b></div>
+                  <div class="bar"><span>TE</span><div class="track"><div class="fill gold" style="width:52%"></div></div><b>+0.4</b></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="decision-row">
+                  <div><strong>Late swap watch</strong><span>If Pittman sits, upgrade Downs to must-start.</span></div>
+                  <div class="pill blue">11:30</div>
+                </div>
+                <div class="decision-row">
+                  <div><strong>Emergency add</strong><span>Best free WR fallback is Demarcus Robinson.</span></div>
+                  <div class="pill gold">$2</div>
+                </div>
+              </div>
+            </div>
+            <div class="prompt-bar">Ask Scout about any lineup slot <div class="send">↑</div></div>
+            <nav class="nav">
+              <button class="active"><span>✓</span><span>Lineup</span></button>
+              <button><span>$</span><span>Waiver</span></button>
+              <button><span>▤</span><span>Saved</span></button>
+              <button><span>◎</span><span>League</span></button>
+            </nav>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="depth-intro">
+      <div>
+        <div class="eyebrow">Depth Below The AI Layer</div>
+        <h2>Scout should be fast first, but never shallow.</h2>
+        <p>The home screen can stay decision-led while each serious fantasy workflow opens into a focused mobile studio. The app should let users build trades, run dynamic mock drafts, manage rookie boards, and work waivers with enough depth to trust the output.</p>
+      </div>
+      <div class="depth-note">
+        The model: Scout starts with a recommendation, then lets the user inspect assumptions, adjust inputs, save the artifact, and continue the deeper version in War Room.
+      </div>
+    </section>
+
+    <section class="mock-grid">
+      <article class="concept">
+        <div class="concept-label">
+          <h2>E. Trade Studio</h2>
+          <p>Real package building on mobile</p>
+        </div>
+        <div class="phone">
+          <div class="screen">
+            <div class="status"><span>9:51</span><span>5G  84%</span></div>
+            <div class="appbar">
+              <div class="mark">S</div>
+              <div class="app-title"><strong>Trade Studio</strong><span>iMacduff · 76% partner fit</span></div>
+              <div class="avatar">⇄</div>
+            </div>
+            <div class="content">
+              <div class="segmented"><span class="on">Build</span><span>Analyze</span><span>History</span></div>
+              <div class="workspace-card">
+                <div class="workspace-head">
+                  <div><strong>Walker package is close.</strong><span>Scout thinks the acceptance gap is a 2027 3rd or $12 FAAB.</span></div>
+                  <div class="pill green">B+</div>
+                </div>
+                <div class="asset-lanes">
+                  <div class="asset-lane">
+                    <h4>You send</h4>
+                    <div class="asset-chip">Kenneth Walker <em>4,141</em></div>
+                    <div class="asset-chip">2027 3rd <em>540</em></div>
+                  </div>
+                  <div class="asset-lane">
+                    <h4>You get</h4>
+                    <div class="asset-chip">Kyler Murray <em>5,230</em></div>
+                    <div class="asset-chip">$12 FAAB <em>120</em></div>
+                  </div>
+                </div>
+                <div class="signal-grid">
+                  <div class="signal"><b style="color:var(--green)">+669</b><span>user value delta</span></div>
+                  <div class="signal"><b style="color:var(--blue)">68%</b><span>acceptance odds</span></div>
+                  <div class="signal"><b style="color:var(--gold)">QB</b><span>biggest roster swing</span></div>
+                  <div class="signal"><b style="color:var(--red)">RB</b><span>your new risk</span></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="decision-row">
+                  <div><strong>Why they accept</strong><span>They are RB-thin, win-now, and have two playable QBs.</span></div>
+                  <div class="pill blue">FIT</div>
+                </div>
+                <div class="decision-row">
+                  <div><strong>Saved versions</strong><span>3 package variants ready for War Room compare.</span></div>
+                  <div class="pill gold">3</div>
+                </div>
+              </div>
+            </div>
+            <div class="prompt-bar">Ask Scout to improve the offer <div class="send">↑</div></div>
+            <nav class="nav">
+              <button><span>⌂</span><span>Today</span></button>
+              <button class="active"><span>⇄</span><span>Trade</span></button>
+              <button><span>▤</span><span>Saved</span></button>
+              <button><span>◎</span><span>League</span></button>
+            </nav>
+          </div>
+        </div>
+      </article>
+
+      <article class="concept">
+        <div class="concept-label">
+          <h2>F. Dynamic Mock</h2>
+          <p>History-aware draft simulation</p>
+        </div>
+        <div class="phone">
+          <div class="screen">
+            <div class="status"><span>10:03</span><span>5G  84%</span></div>
+            <div class="appbar">
+              <div class="mark">S</div>
+              <div class="app-title"><strong>Mock Draft</strong><span>2026 rookie · trades enabled</span></div>
+              <div class="avatar">☆</div>
+            </div>
+            <div class="content">
+              <div class="segmented"><span>Board</span><span class="on">Mock</span><span>Trades</span></div>
+              <div class="workspace-card">
+                <div class="workspace-head">
+                  <div><strong>Your 2.01 has leverage.</strong><span>Three teams behind you need QB. Scout sees trade-down value.</span></div>
+                  <div class="pill gold">2.01</div>
+                </div>
+                <div class="draft-track">
+                  <div class="pick-dot">1.13</div>
+                  <div class="pick-dot">1.14</div>
+                  <div class="pick-dot">1.15</div>
+                  <div class="pick-dot mine">2.01</div>
+                  <div class="pick-dot trade">2.04</div>
+                </div>
+                <div class="mini-board">
+                  <div class="rank">1</div>
+                  <div class="prospect"><strong>Malik Benson</strong><span>WR · 4.41 speed · owner fit 83%</span></div>
+                  <div class="pill green">TAKE</div>
+                </div>
+                <div class="mini-board">
+                  <div class="rank">2</div>
+                  <div class="prospect"><strong>Drew Allar</strong><span>QB · likely reaches QB-needy rival</span></div>
+                  <div class="pill gold">TRADE</div>
+                </div>
+                <div class="mini-board">
+                  <div class="rank">3</div>
+                  <div class="prospect"><strong>Justice Haynes</strong><span>RB · value better after 2.06</span></div>
+                  <div class="pill blue">WAIT</div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-title"><strong>Trade-down path</strong><span>CPU offer</span></div>
+                <div class="decision-row">
+                  <div><strong>Give 2.01</strong><span>Get 2.04 + 2027 3rd. Still 62% chance Benson falls.</span></div>
+                  <div class="pill green">+410</div>
+                </div>
+              </div>
+            </div>
+            <div class="prompt-bar">Run 10 more mocks from 2.01 <div class="send">↑</div></div>
+            <nav class="nav">
+              <button><span>⌂</span><span>Today</span></button>
+              <button class="active"><span>☆</span><span>Draft</span></button>
+              <button><span>▤</span><span>Saved</span></button>
+              <button><span>◎</span><span>League</span></button>
+            </nav>
+          </div>
+        </div>
+      </article>
+
+      <article class="concept">
+        <div class="concept-label">
+          <h2>G. Rookie Big Board</h2>
+          <p>Personal rankings, tiers, notes</p>
+        </div>
+        <div class="phone">
+          <div class="screen">
+            <div class="status"><span>10:11</span><span>5G  84%</span></div>
+            <div class="appbar">
+              <div class="mark">S</div>
+              <div class="app-title"><strong>Rookie Board</strong><span>Custom board · synced to War Room</span></div>
+              <div class="avatar">BB</div>
+            </div>
+            <div class="content">
+              <div class="segmented"><span class="on">Rank</span><span>Tiers</span><span>Notes</span></div>
+              <div class="workspace-card">
+                <div class="workspace-head">
+                  <div><strong>Tier 2 starts at 1.05.</strong><span>Your league over-drafts RB by 18%, so WR value should slide.</span></div>
+                  <div class="pill blue">SYNC</div>
+                </div>
+                <div class="mini-board">
+                  <div class="rank">1</div>
+                  <div class="prospect"><strong>Jeremiyah Love</strong><span>RB · elite burst · Round 1 hit 71%</span></div>
+                  <div class="pill green">T1</div>
+                </div>
+                <div class="mini-board">
+                  <div class="rank">2</div>
+                  <div class="prospect"><strong>Ryan Williams</strong><span>WR · top-5 ceiling · age edge</span></div>
+                  <div class="pill green">T1</div>
+                </div>
+                <div class="mini-board">
+                  <div class="rank">3</div>
+                  <div class="prospect"><strong>Drew Allar</strong><span>QB · SF premium · league need spike</span></div>
+                  <div class="pill gold">T2</div>
+                </div>
+                <div class="mini-board">
+                  <div class="rank">4</div>
+                  <div class="prospect"><strong>Malik Benson</strong><span>WR · moved up 7 after film note</span></div>
+                  <div class="pill gold">T2</div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="decision-row">
+                  <div><strong>Board rule</strong><span>Auto-flag prospects who match your WR + DB rebuild thesis.</span></div>
+                  <div class="pill violet">RULE</div>
+                </div>
+              </div>
+            </div>
+            <div class="prompt-bar">Move Benson above Allar? <div class="send">↑</div></div>
+            <nav class="nav">
+              <button><span>⌂</span><span>Today</span></button>
+              <button class="active"><span>▦</span><span>Board</span></button>
+              <button><span>▤</span><span>Saved</span></button>
+              <button><span>◎</span><span>League</span></button>
+            </nav>
+          </div>
+        </div>
+      </article>
+
+      <article class="concept">
+        <div class="concept-label">
+          <h2>H. Waiver Workbench</h2>
+          <p>Redraft + dynasty bid planning</p>
+        </div>
+        <div class="phone">
+          <div class="screen">
+            <div class="status"><span>Tue 8:07</span><span>5G  84%</span></div>
+            <div class="appbar">
+              <div class="mark">S</div>
+              <div class="app-title"><strong>Waiver Workbench</strong><span>$43 FAAB · 5 claims possible</span></div>
+              <div class="avatar">$</div>
+            </div>
+            <div class="content">
+              <div class="segmented"><span class="on">Adds</span><span>Drops</span><span>Market</span></div>
+              <div class="workspace-card">
+                <div class="workspace-head">
+                  <div><strong>Bid selectively this week.</strong><span>You can outbid 11 teams, but only two adds change your lineup.</span></div>
+                  <div class="pill green">$43</div>
+                </div>
+                <div class="waiver-row">
+                  <div><strong>Jalin Hyatt</strong><span>WR · dynasty stash + spot flex upside</span></div>
+                  <div class="pill gold">$4-7</div>
+                </div>
+                <div class="waiver-row">
+                  <div><strong>Demarcus Robinson</strong><span>WR · redraft emergency floor</span></div>
+                  <div class="pill blue">$1-2</div>
+                </div>
+                <div class="waiver-row">
+                  <div><strong>Jaleel McLaughlin</strong><span>RB · only if Mostert news breaks</span></div>
+                  <div class="pill red">WATCH</div>
+                </div>
+                <div class="stacked-actions">
+                  <div class="mini-action"><strong>Drop</strong><span>Josh Johnson first</span></div>
+                  <div class="mini-action"><strong>Threat</strong><span>KevinAudio can outbid</span></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="decision-row">
+                  <div><strong>Claim stack saved</strong><span>Hyatt $6, Robinson $2, McLaughlin watchlist.</span></div>
+                  <div class="pill green">SAVE</div>
+                </div>
+              </div>
+            </div>
+            <div class="prompt-bar">Build the optimal claim order <div class="send">↑</div></div>
+            <nav class="nav">
+              <button><span>⌂</span><span>Today</span></button>
+              <button class="active"><span>$</span><span>Waiver</span></button>
+              <button><span>▤</span><span>Saved</span></button>
+              <button><span>◎</span><span>League</span></button>
+            </nav>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="depth-intro">
+      <div>
+        <div class="eyebrow">Team And League Portfolio</div>
+        <h2>Scout needs to understand the manager, not just one roster.</h2>
+        <p>Fantasy players want to inspect their own teams deeply and run multiple leagues without bouncing through a hard switcher. Scout should have a personal portfolio layer: every team, every urgent move, every saved artifact, one command context.</p>
+      </div>
+      <div class="depth-note">
+        The operating idea: choose a league when detail matters, but let the AI reason across every team by default. “Where am I exposed?” should work across dynasty, keeper, and redraft.
+      </div>
+    </section>
+
+    <section class="mock-grid">
+      <article class="concept">
+        <div class="concept-label">
+          <h2>I. My Team Command</h2>
+          <p>Deep self-scouting, not a roster list</p>
+        </div>
+        <div class="phone">
+          <div class="screen">
+            <div class="status"><span>10:24</span><span>5G  84%</span></div>
+            <div class="appbar">
+              <div class="mark">S</div>
+              <div class="app-title"><strong>My Team</strong><span>Pontiac Aztek Racing Club</span></div>
+              <div class="avatar">BL</div>
+            </div>
+            <div class="content">
+              <div class="team-hero">
+                <div class="team-hero-top">
+                  <div>
+                    <strong>Rebuild, but not aimless.</strong>
+                    <span>Your path is WR + DB youth, pick liquidity, and selling value-window vets.</span>
+                  </div>
+                  <div class="team-score">61</div>
+                </div>
+                <div class="metric-strip">
+                  <div class="metric"><b style="color:var(--gold)">#14</b><span>power rank</span></div>
+                  <div class="metric"><b style="color:var(--green)">20</b><span>owned picks</span></div>
+                  <div class="metric"><b style="color:var(--red)">-8.2k</b><span>elite gap</span></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-title"><strong>Position rooms</strong><span>starter coverage</span></div>
+                <div class="room-grid">
+                  <div class="room-card"><strong>QB <em style="color:var(--gold);font-style:normal">2/3</em></strong><small>Need future anchor behind Jones.</small><div class="room-meter"><div style="width:56%;background:var(--gold)"></div></div></div>
+                  <div class="room-card"><strong>RB <em style="color:var(--green);font-style:normal">4/4</em></strong><small>Enough bodies, low elite upside.</small><div class="room-meter"><div style="width:72%"></div></div></div>
+                  <div class="room-card"><strong>WR <em style="color:var(--red);font-style:normal">4/6</em></strong><small>Main rebuild priority.</small><div class="room-meter"><div style="width:38%;background:var(--red)"></div></div></div>
+                  <div class="room-card"><strong>DB <em style="color:var(--red);font-style:normal">7/9</em></strong><small>Depth looks large, quality is thin.</small><div class="room-meter"><div style="width:44%;background:var(--red)"></div></div></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="decision-row">
+                  <div><strong>Next best team move</strong><span>Package Mostert or Rodgers with a 3rd for a young WR.</span></div>
+                  <div class="pill green">ACT</div>
+                </div>
+              </div>
+            </div>
+            <div class="prompt-bar">Ask how to fix this team <div class="send">↑</div></div>
+            <nav class="nav">
+              <button><span>⌂</span><span>Today</span></button>
+              <button class="active"><span>▣</span><span>Team</span></button>
+              <button><span>▤</span><span>Saved</span></button>
+              <button><span>◎</span><span>League</span></button>
+            </nav>
+          </div>
+        </div>
+      </article>
+
+      <article class="concept">
+        <div class="concept-label">
+          <h2>J. Roster Rooms</h2>
+          <p>Granular team inspection on mobile</p>
+        </div>
+        <div class="phone">
+          <div class="screen">
+            <div class="status"><span>10:27</span><span>5G  84%</span></div>
+            <div class="appbar">
+              <div class="mark">S</div>
+              <div class="app-title"><strong>Roster Rooms</strong><span>WR room · rebuild lens</span></div>
+              <div class="avatar">WR</div>
+            </div>
+            <div class="content">
+              <div class="segmented"><span>All</span><span class="on">WR</span><span>Assets</span></div>
+              <div class="workspace-card">
+                <div class="workspace-head">
+                  <div><strong>WR is the swing room.</strong><span>You have useful starters, but no elite top-5 or 7,000 DHQ WR.</span></div>
+                  <div class="pill red">THIN</div>
+                </div>
+                <div class="mini-board">
+                  <div class="rank">1</div>
+                  <div class="prospect"><strong>Josh Downs</strong><span>24 · 2,650 DHQ · hold through rebuild</span></div>
+                  <div class="pill green">HOLD</div>
+                </div>
+                <div class="mini-board">
+                  <div class="rank">2</div>
+                  <div class="prospect"><strong>Tre Tucker</strong><span>25 · 1,663 DHQ · sell if market spikes</span></div>
+                  <div class="pill gold">FLEX</div>
+                </div>
+                <div class="mini-board">
+                  <div class="rank">3</div>
+                  <div class="prospect"><strong>Mike Evans</strong><span>32 · value-window risk · contender target</span></div>
+                  <div class="pill red">SELL</div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-title"><strong>Room math</strong><span>champion benchmark</span></div>
+                <div class="signal-grid">
+                  <div class="signal"><b style="color:var(--red)">0</b><span>elite WRs</span></div>
+                  <div class="signal"><b style="color:var(--gold)">2</b><span>startable WRs</span></div>
+                  <div class="signal"><b style="color:var(--blue)">24.8</b><span>avg age</span></div>
+                  <div class="signal"><b style="color:var(--green)">+3</b><span>pick path</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="prompt-bar">Find a realistic WR upgrade <div class="send">↑</div></div>
+            <nav class="nav">
+              <button><span>⌂</span><span>Today</span></button>
+              <button class="active"><span>▣</span><span>Team</span></button>
+              <button><span>▤</span><span>Saved</span></button>
+              <button><span>◎</span><span>League</span></button>
+            </nav>
+          </div>
+        </div>
+      </article>
+
+      <article class="concept">
+        <div class="concept-label">
+          <h2>K. League Portfolio</h2>
+          <p>All owned leagues in one operating view</p>
+        </div>
+        <div class="phone">
+          <div class="screen">
+            <div class="status"><span>10:31</span><span>5G  84%</span></div>
+            <div class="appbar">
+              <div class="mark">S</div>
+              <div class="app-title"><strong>League Portfolio</strong><span>6 teams · 14 open decisions</span></div>
+              <div class="avatar">6</div>
+            </div>
+            <div class="content">
+              <div class="league-strip">
+                <div class="league-token active"><strong>All</strong><span>14 moves</span></div>
+                <div class="league-token"><strong>Psycho</strong><span>dynasty</span></div>
+                <div class="league-token"><strong>Sunday</strong><span>redraft</span></div>
+                <div class="league-token"><strong>IDP</strong><span>keeper</span></div>
+              </div>
+              <div class="portfolio-row">
+                <div class="league-badge">PY</div>
+                <div><strong>Pontiac Aztek</strong><span>Dynasty · rebuild · 3 trade paths · 2 waivers</span></div>
+                <div class="pill red">URG</div>
+              </div>
+              <div class="portfolio-row">
+                <div class="league-badge">SR</div>
+                <div><strong>Sunday Redraft</strong><span>Lineup lock in 2h · 1 flex call · weather watch</span></div>
+                <div class="pill gold">2h</div>
+              </div>
+              <div class="portfolio-row">
+                <div class="league-badge">ID</div>
+                <div><strong>IDP Bloodbath</strong><span>LB depth thin · waiver claim stack ready</span></div>
+                <div class="pill blue">LB</div>
+              </div>
+              <div class="portfolio-row">
+                <div class="league-badge">SF</div>
+                <div><strong>Superflex Empire</strong><span>Mock draft saved · 1.08 trade-down live</span></div>
+                <div class="pill green">+EV</div>
+              </div>
+              <div class="card">
+                <div class="decision-row">
+                  <div><strong>Portfolio read</strong><span>Your highest ROI today is redraft lineup, then dynasty WR trade work.</span></div>
+                  <div class="pill green">NOW</div>
+                </div>
+              </div>
+            </div>
+            <div class="prompt-bar">Ask across all my leagues <div class="send">↑</div></div>
+            <nav class="nav">
+              <button class="active"><span>◎</span><span>All</span></button>
+              <button><span>▣</span><span>Teams</span></button>
+              <button><span>▤</span><span>Saved</span></button>
+              <button><span>✦</span><span>Ask</span></button>
+            </nav>
+          </div>
+        </div>
+      </article>
+
+      <article class="concept">
+        <div class="concept-label">
+          <h2>L. Cross-League Queue</h2>
+          <p>One AI queue for every team</p>
+        </div>
+        <div class="phone">
+          <div class="screen">
+            <div class="status"><span>10:35</span><span>5G  84%</span></div>
+            <div class="appbar">
+              <div class="mark">S</div>
+              <div class="app-title"><strong>Action Queue</strong><span>Sorted by deadline + leverage</span></div>
+              <div class="avatar">AI</div>
+            </div>
+            <div class="content">
+              <div class="action-stack">
+                <div class="cross-action">
+                  <div class="cross-action-head">
+                    <div><strong>Set two redraft lineups first.</strong><span>Highest deadline risk. Downs is a start in both leagues.</span></div>
+                    <div class="pill red">1h</div>
+                  </div>
+                  <div class="league-tags"><span>Sunday Redraft</span><span>Work League</span></div>
+                </div>
+                <div class="cross-action">
+                  <div class="cross-action-head">
+                    <div><strong>Build one WR trade package.</strong><span>Same roster weakness appears in two dynasty teams.</span></div>
+                    <div class="pill gold">WR</div>
+                  </div>
+                  <div class="league-tags"><span>Psycho Dynasty</span><span>Superflex Empire</span></div>
+                </div>
+                <div class="cross-action">
+                  <div class="cross-action-head">
+                    <div><strong>Submit waiver stacks later.</strong><span>No urgency until injury reports. Save claims, wait for news.</span></div>
+                    <div class="pill blue">WAIT</div>
+                  </div>
+                  <div class="league-tags"><span>IDP Bloodbath</span><span>Sunday Redraft</span></div>
+                </div>
+                <div class="cross-action">
+                  <div class="cross-action-head">
+                    <div><strong>Review saved mock path.</strong><span>Only matters if 1.08 trade window stays open.</span></div>
+                    <div class="pill green">LOW</div>
+                  </div>
+                  <div class="league-tags"><span>Superflex Empire</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="prompt-bar">What should I do across all leagues? <div class="send">↑</div></div>
+            <nav class="nav">
+              <button class="active"><span>◎</span><span>All</span></button>
+              <button><span>▣</span><span>Teams</span></button>
+              <button><span>▤</span><span>Saved</span></button>
+              <button><span>✦</span><span>Ask</span></button>
+            </nav>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+</body>
+</html>
