@@ -554,17 +554,22 @@
     });
     const marketCompatibility=fantasyCalcCompatibility({...cfg,rosterPositions,scoring,ppr:cfg.ppr??scoring.rec});
 
+    // Rookie / market-only rows (gp===0, no ppg) have no real age on file — default
+    // to a rookie-appropriate 21 rather than 26, so their age-curve factor and future
+    // projections aren't penalized as if they were 26-year-olds. Veterans with real
+    // stats (ppg>0) keep the 26 fallback for a genuinely missing age.
+    const ageFor = row => Number(row.age) || (row.gp === 0 && (row.ppg || 0) === 0 ? 21 : 26);
     const rawComposites=baseRows.map(row=>{
       const marketPpgProxy=row.fc_value?row.fc_value/450:0;
       const basePpg=row.ppg||marketPpgProxy;
       const replacement=topByPosition[row.position]?.replacement||0;
       const replacementEdge=Math.max(0,basePpg-replacement);
       const lineupValuePpg=(basePpg*0.35)+(replacementEdge*0.65);
-      return lineupValuePpg*ageCurveFactor(row.age||26,row.position)*(positionContext[row.position]||1);
+      return lineupValuePpg*ageCurveFactor(ageFor(row),row.position)*(positionContext[row.position]||1);
     });
     const topComposite=Math.max(1,...rawComposites);
     const playerRows=baseRows.map((row,idx)=>{
-      const currentAgeFactor=ageCurveFactor(row.age||26,row.position);
+      const currentAgeFactor=ageCurveFactor(ageFor(row),row.position);
       const ppgValue=Math.round((rawComposites[idx]/topComposite)*10000);
       const marketValue=Number(row.fc_value)||0;
       const marketPpgProxy=marketValue?marketValue/450:0;
@@ -608,7 +613,7 @@
         dhq_now:Math.max(0,Math.min(10000,now)),
       };
       for(let year=1;year<=projectionYears;year++){
-        const futureFactor=ageCurveFactor((row.age||26)+year,row.position)/Math.max(0.01,currentAgeFactor);
+        const futureFactor=ageCurveFactor(ageFor(row)+year,row.position)/Math.max(0.01,currentAgeFactor);
         const horizonDiscount=isDynasty?Math.pow(0.96,year):Math.pow(0.70,year);
         out[`dhq_year_${year}`]=Math.round(out.dhq_now*futureFactor*horizonDiscount);
       }
