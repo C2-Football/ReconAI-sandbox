@@ -182,7 +182,7 @@ Assistant: "At **1.05** in your SF league, target the best RB — your RB room i
 1. Ashton Jeanty (RB, DHQ ~7,800) — day-1 starter profile, elite ceiling
 2. Luther Burden (WR, DHQ ~6,200) — BPA play with elite route-running
 Avoid QB here — you have Lamar + Stroud. IDP this early wastes capital."`,
-    maxTokens: 500,
+    maxTokens: 900,
   },
 
   // ── DRAFT SCOUTING (detailed report) ───────────────────────────
