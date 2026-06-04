@@ -196,6 +196,7 @@ process.stdout.write('OK\n\n');
 // ── Grab references ───────────────────────────────────────────────
 const normPos           = ctx.normPos;
 const posLabel          = ctx.posLabel;
+const formatNFLDraftSlot = ctx.formatNFLDraftSlot;
 const getLeaguePositions = ctx.getLeaguePositions;
 const calcRawPts        = ctx.calcRawPts;
 const calcFantasyPts    = ctx.Sleeper.calcFantasyPts;
@@ -247,6 +248,21 @@ group('posLabel');
 test('DEF displays as D/ST', () => eq(posLabel('DEF'), 'D/ST'));
 test('DST displays as D/ST', () => eq(posLabel('DST'), 'D/ST'));
 test('Picks label keeps casing', () => eq(posLabel('Picks'), 'Picks'));
+
+group('formatNFLDraftSlot');
+// NFL draft-capital label: overall pick → R{round}.{pickInRound}, divisor 32.
+// The bug this guards: a round-2+ pick showed the OVERALL pick (e.g. "R2.33")
+// instead of the in-round slot ("R2.01").
+test('R1 first pick → R1.01',  () => eq(formatNFLDraftSlot(1, 1),   'R1.01'));
+test('R1 last pick → R1.32',   () => eq(formatNFLDraftSlot(1, 32),  'R1.32'));
+test('R2 first pick → R2.01',  () => eq(formatNFLDraftSlot(2, 33),  'R2.01'));
+test('R2 mid pick → R2.18',    () => eq(formatNFLDraftSlot(2, 50),  'R2.18'));
+test('R3 first pick → R3.01',  () => eq(formatNFLDraftSlot(3, 65),  'R3.01'));
+test('R4 pick → R4.04',        () => eq(formatNFLDraftSlot(4, 100), 'R4.04'));
+test('round, no pick → R{n}',  () => eq(formatNFLDraftSlot(5, 0),   'R5'));
+test('no round, has pick → #', () => eq(formatNFLDraftSlot(0, 150), '#150'));
+test('no data → empty',        () => eq(formatNFLDraftSlot(0, 0),   ''));
+test('in-round floor never < 1', () => eq(formatNFLDraftSlot(2, 1), 'R2.01'));
 
 group('getLeaguePositions');
 test('adds D/ST when league has a defense slot', () => {
