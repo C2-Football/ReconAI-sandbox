@@ -1905,12 +1905,13 @@ async function loadLeagueIntel(){
     }catch(e){console.warn('IDP/K rookie step failed:',e);}
 
     // ═══════════════════════════════════════════════════════════════
-    // STEP 12c: Ranking-sanity rail (SANDBOX-GATED) — nudge ONLY the few
-    // high-value assets whose DHQ rank diverges wildly from the FC market
-    // rank, leaving the rest of the board untouched. Production unchanged
-    // until validated and the gate is removed.
+    // STEP 12c: Ranking-sanity rail — nudge ONLY the few high-value assets
+    // whose DHQ rank diverges wildly from the FantasyCalc market rank, toward
+    // market, leaving the rest of the board untouched. Validated (rho 0.892→
+    // ~0.915, ~50/2001 assets moved, DHQ's defensible reads preserved) and
+    // PROMOTED TO PRODUCTION 2026-06-03.
     // ═══════════════════════════════════════════════════════════════
-    try{ if(window.isSandbox?.()) _dhqApplyRankSanityRail(playerScores,playerMeta); }
+    try{ _dhqApplyRankSanityRail(playerScores,playerMeta); }
     catch(e){window.dhqLog?.('rankRail',e);}
 
     // ═══════════════════════════════════════════════════════════════
