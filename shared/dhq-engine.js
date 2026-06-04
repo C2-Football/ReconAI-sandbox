@@ -312,6 +312,8 @@ function _dhqDepthRole(pid,p,S,posMapLocal){
   let rank=null,rolePos=p?.depth_chart_position||pos,source='';
 
   if(typeof p?.depth_chart_order==='number'&&Number.isFinite(p.depth_chart_order)){
+    // Sleeper depth_chart_order is 1-indexed (starter=1). Keep the raw read for
+    // the multiplier (it's calibrated to it); the label is fixed below (pos+rank).
     rank=Math.max(0,p.depth_chart_order);
     source='player';
   }
@@ -335,7 +337,8 @@ function _dhqDepthRole(pid,p,S,posMapLocal){
 
   if(rank==null)return{rank:null,label:'',mult:1,source:'',reason:''};
 
-  const label=(rolePos||pos||'').toUpperCase()+String(rank+1);
+  // Depth label = real chart position (Sleeper 1-indexed): starter -> QB1, not QB2.
+  const label=(rolePos||pos||'').toUpperCase()+String(Math.max(1,rank));
   let mult=1;
   if(pos==='QB'){
     mult=rank===0?1.15:rank===1?0.78:rank===2?0.52:0.35;

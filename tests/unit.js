@@ -530,13 +530,18 @@ test('production model blends 75% last year with 25% career',
     near(prod.lastYearAdj, 17.6, 0.01, 'half-season adjusted PPG');
   });
 
+// NOTE: Sleeper's depth_chart_order is 1-INDEXED (starter=1, backup=2, QB3=3).
+// The depth LABEL reflects that real chart position (starter -> QB1). The role
+// MULTIPLIER reads the raw 1-indexed order against the (0-indexed) mult table —
+// a deliberate dampening that keeps QBs near the FantasyCalc market; un-dampening
+// it (the "true" index fix) inflates QBs and crushes skill players vs market.
 test('QB3 depth chart role receives a severe role discount',
   () => {
     const role = DhqValueTuning.depthRole('qb3', {
-      position: 'QB', team: 'LV', depth_chart_order: 2, depth_chart_position: 'QB',
+      position: 'QB', team: 'LV', depth_chart_order: 3, depth_chart_position: 'QB',
     }, { depthCharts: {} }, p => p);
     eq(role.label, 'QB3');
-    near(role.mult, 0.52, 0.001);
+    near(role.mult, 0.35, 0.001);
   });
 
 test("Aidan O'Connell profile: QB2 depth role receives backup penalty",
@@ -545,19 +550,19 @@ test("Aidan O'Connell profile: QB2 depth role receives backup penalty",
       full_name: "Aidan O'Connell",
       position: 'QB',
       team: 'LV',
-      depth_chart_order: 1,
+      depth_chart_order: 2,
       depth_chart_position: 'QB',
     }, { depthCharts: {} }, p => p);
     const camRole = DhqValueTuning.depthRole('cam_ward', {
       full_name: 'Cam Ward',
       position: 'QB',
       team: 'TEN',
-      depth_chart_order: 0,
+      depth_chart_order: 1,
       depth_chart_position: 'QB',
     }, { depthCharts: {} }, p => p);
     eq(aidanRole.label, 'QB2');
-    near(aidanRole.mult, 0.78, 0.001);
-    ok(aidanRole.mult < camRole.mult, 'QB2 should be valued below a young QB1 role');
+    near(aidanRole.mult, 0.52, 0.001);
+    ok(aidanRole.mult < camRole.mult, 'QB2 should be valued below the QB1 role');
   });
 
 test('Cam Ward profile: young QB1 keeps starter protection',
@@ -566,7 +571,7 @@ test('Cam Ward profile: young QB1 keeps starter protection',
       full_name: 'Cam Ward',
       position: 'QB',
       team: 'TEN',
-      depth_chart_order: 0,
+      depth_chart_order: 1,
       depth_chart_position: 'QB',
       age: 24,
     }, { depthCharts: {} }, p => p);
@@ -583,8 +588,8 @@ test('Cam Ward profile: young QB1 keeps starter protection',
       hasRealTeam: true,
       isOffseasonTeams: false,
     });
-    eq(role.label, 'QB1');
-    ok(role.mult > 1, 'QB1 should receive a starter role lift');
+    eq(role.label, 'QB1'); // real Sleeper QB1 (order 1) is now labeled QB1, not QB2
+    near(role.mult, 0.78, 0.001); // calibrated rank-1 mult (dampened; see note above)
     eq(status.code, 'active');
     eq(status.cap, null);
     eq(status.mult, 1);

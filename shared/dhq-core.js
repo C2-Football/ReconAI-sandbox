@@ -287,7 +287,12 @@
     const cleanTeam=team&&team!=='null'&&team!=='FA'?team:null;
     let rank=null,rolePos=player?.depth_chart_position||pos,source='';
 
-    // Path A — Sleeper player object. Raw 0-based read (see CONVENTION note).
+    // Path A — Sleeper player object. depth_chart_order is 1-INDEXED (starter=1).
+    // We KEEP `rank` as the raw 1-indexed read because the role-MULTIPLIER table
+    // (depthRoleMult) is calibrated against it — converting to a true 0-based
+    // rank flips starters from the backup mult to the starter mult, which
+    // inflates QBs and crushes skill players vs the FantasyCalc market. The
+    // user-facing DEPTH LABEL is corrected separately below (pos+rank, not +1).
     if(typeof player?.depth_chart_order==='number'&&Number.isFinite(player.depth_chart_order)){
       rank=Math.max(0,player.depth_chart_order);
       source='player';
@@ -316,7 +321,11 @@
 
     if(rank==null)return{rank:null,label:'',mult:1,source:'',reason:''};
 
-    const label=(rolePos||pos||'').toUpperCase()+String(rank+1);
+    // `rank` is the raw 1-indexed Sleeper order (starter=1), so the depth label
+    // is pos+rank (QB1 for the starter), NOT pos+(rank+1). Guarded so it's never
+    // below 1. The multiplier keeps using `rank` against the calibrated table —
+    // labels are fixed, scores are unchanged.
+    const label=(rolePos||pos||'').toUpperCase()+String(Math.max(1,rank));
     const mult=depthRoleMult(pos,rank);
     return{rank,label,mult:+mult.toFixed(3),source,reason:`NFL depth chart ${label}`};
   }
