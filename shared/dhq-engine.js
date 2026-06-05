@@ -1862,7 +1862,13 @@ async function loadLeagueIntel(){
           const prospect=typeof window.findProspect==='function'
             ?window.findProspect(p.full_name||((p.first_name||'')+' '+(p.last_name||'')).trim())
             :null;
-          const consensusRank=prospect?.consensusRank||prospect?.rank||999;
+          // Require a real consensus match. Sleeper's player universe contains
+          // hundreds of years_exp===0 UDFA nobodies; without this guard each one
+          // gets pinned to the bottom of the veteran ladder and floods the
+          // leaderboard. Only rookies that appear in the prospect consensus
+          // (with an actual rank) earn a DHQ value here.
+          const consensusRank=prospect?.consensusRank||prospect?.rank||null;
+          if(!consensusRank||consensusRank>=999)return;
 
           // Position rank among rookies at this position
           const posRank=prospect?.rookiePosRank||Math.ceil(consensusRank/(pos==='K'?8:4));
@@ -1872,7 +1878,12 @@ async function loadLeagueIntel(){
           let rookieDHQ;
           if(ladder.length>=3){
             const idx=Math.min(posRank+offset-1,ladder.length-1);
-            rookieDHQ=ladder[idx]||ladder[ladder.length-1]||0;
+            // Decay deep prospects below the veteran floor instead of pinning
+            // them flat to the worst rostered vet — a consensus-rank-50 LB should
+            // not equal the league's #15 starter.
+            const floorVal=ladder[idx]||ladder[ladder.length-1]||0;
+            const overflow=(posRank+offset-1)-(ladder.length-1);
+            rookieDHQ=overflow>0?Math.round(floorVal*Math.max(0.15,1-overflow*0.08)):floorVal;
           }else{
             // Sparse ladder fallback: rank-based estimate scaled by position weight
             const posWeight={DL:0.55,LB:0.45,DB:0.50,K:0.20};
