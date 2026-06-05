@@ -274,13 +274,14 @@
     return map;
   }
 
+  // Only sources we've confirmed the provenance of feed the consensus. The
+  // dropped columns (BR, DT, SIS, SD) were unverified abbreviations. ATH is
+  // The Athletic / Dane Brugler's "The Beast".
+  const VERIFIED_SOURCES = new Set(['ath', 'cbs', 'espn', 'pff', 'pfn', 'tank']);
+
   function sourceColumns(rows) {
     if (!rows.length) return [];
-    const standard = new Set([
-      'rank', 'player name', 'player', 'name', 'pos', 'position', 'college',
-      'school', 'player_id', 'id', '_rowindex', 'exp', 'avg',
-    ]);
-    return Object.keys(rows[0]).filter(col => !standard.has(col.toLowerCase()));
+    return Object.keys(rows[0]).filter(col => VERIFIED_SOURCES.has(col.toLowerCase()));
   }
 
   function buildSourceRanks(row, cols) {
@@ -304,10 +305,14 @@
     const sources = buildSourceRanks(row, sourceCols);
     const sourceRanks = {};
     sources.forEach(src => { sourceRanks[src.source] = src.rank; });
-    let consensusRank = parseNum(row.Avg);
-    if (!consensusRank && sources.length) {
+    // Recompute the consensus from the verified sources only. Do NOT trust the
+    // precomputed Avg column — it was averaged across the dropped sources too.
+    let consensusRank;
+    if (sources.length) {
       const totalWeight = sources.reduce((sum, src) => sum + (src.weight || 1), 0);
       consensusRank = sources.reduce((sum, src) => sum + src.rank * (src.weight || 1), 0) / totalWeight;
+    } else {
+      consensusRank = parseNum(row.Avg) || rank;
     }
     consensusRank = Math.round((consensusRank || rank) * 10) / 10;
     const school = enrich.school || row.School || row.school || row.College || row.college || mock.school || '';
@@ -478,7 +483,9 @@
       byPos[pos].push(p);
     });
     Object.values(byPos).forEach(group => {
-      group.sort((a, b) => a.rank - b.rank || a.consensusRank - b.consensusRank);
+      // Rank within position by the (verified-source) consensus, falling back to
+      // the board rank — so position ranks track the cleaned consensus.
+      group.sort((a, b) => (a.consensusRank || 999) - (b.consensusRank || 999) || (a.rank || 999) - (b.rank || 999));
       group.forEach((p, index) => { p.rookiePosRank = index + 1; });
     });
   }
