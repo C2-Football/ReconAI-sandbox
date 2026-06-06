@@ -31,6 +31,17 @@
     DL: 12, LB: 10, DB: 12, OL: 20,
   };
   const VET_OFFSETS_ONE_QB = { ...VET_OFFSETS, QB: 24 };
+  // IDP rookie value (DL/LB/DB): post-draft, blend a draft-capital cohort with the
+  // scouting cohort. The defensive ladders are deep (hundreds rostered), so mapping a
+  // rookie by in-class scouting rank alone let late-round defenders inherit rosterable-
+  // veteran value (a R7 DL was landing ~1,450, ~93% of a R1). Anchoring the capital
+  // cohort to the league's startable pool (teams × starters) maps R1 to the top of the
+  // pool and steps each later round deeper; the scouting weight keeps a well-scouted
+  // faller ahead of a same-round reach. Pre-draft (no round/pick) IDP fall back to 100%
+  // scouting, so the Big Board still works before the NFL draft happens.
+  const IDP_LADDER_POSITIONS = new Set(['DL', 'LB', 'DB']);
+  const IDP_ROUND_POOL_MULT = { 1: 0.3, 2: 0.6, 3: 1.0, 4: 1.4, 5: 1.9, 6: 2.5, 7: 3.2 };
+  const IDP_CAPITAL_WEIGHT = 0.8; // 80% draft capital / 20% scouting, post-draft
 
   const cache = {
     loaded: false,
@@ -535,14 +546,29 @@
     return cache.loading;
   }
 
+  // Position-ladder cache. computeStartupValue is called once per prospect, and
+  // each call used to re-sort the entire score table (~85ms cold for a rookie
+  // class). Build every position's ladder in a single pass and cache it per
+  // playerScores/playerMeta identity — the same identity the dynasty cache keys on,
+  // so it invalidates together when the engine reloads. ~85ms → <1ms.
+  let _ladderCache = { scores: null, meta: null, byPos: {} };
   function getPositionLadder(pos) {
     const scores = window.App?.LI?.playerScores;
     const meta = window.App?.LI?.playerMeta;
     if (!scores || !meta) return [];
-    return Object.entries(scores)
-      .filter(([pid]) => meta[pid]?.pos === pos && scores[pid] > 0)
-      .sort((a, b) => b[1] - a[1])
-      .map(([, value]) => value);
+    if (_ladderCache.scores !== scores || _ladderCache.meta !== meta) {
+      const byPos = {};
+      for (const pid in scores) {
+        const v = scores[pid];
+        if (!(v > 0)) continue;
+        const p = meta[pid] && meta[pid].pos;
+        if (!p) continue;
+        (byPos[p] = byPos[p] || []).push(v);
+      }
+      for (const p in byPos) byPos[p].sort((a, b) => b - a);
+      _ladderCache = { scores, meta, byPos };
+    }
+    return _ladderCache.byPos[pos] || [];
   }
 
   function isSuperflexLeague() {
@@ -551,15 +577,64 @@
     return rp.some(slot => ['SUPER_FLEX', 'QB_FLEX', 'OP'].includes(String(slot).toUpperCase()));
   }
 
+  function leagueTeamCount() {
+    const S = window.App?.S || window.S;
+    return S?.leagues?.find(l => l.league_id === S?.currentLeagueId)?.total_rosters
+      || S?.rosters?.length || 12;
+  }
+
+  // Veteran-ladder value at a 1-based slot (clamped to the ladder).
+  function ladderValueAt(ladder, slot) {
+    if (!ladder.length) return 0;
+    return ladder[Math.min(Math.max(0, Math.round(slot) - 1), ladder.length - 1)] || 0;
+  }
+
+  // True once NFL draft results are loaded (any prospect carries a round/pick).
+  // Latches, so the per-prospect scan only runs until the draft is in. Lets us tell
+  // "pre-draft, capital unknown for everyone" (→ rank on scouting) apart from
+  // "post-draft, this player has no capital" (→ went undrafted, treat as UDFA).
+  let _draftResultsLoaded = false;
+  function draftResultsLoaded() {
+    if (_draftResultsLoaded) return true;
+    _draftResultsLoaded = !!(cache.order && cache.order.some(p => Number(p.draftRound) > 0 || Number(p.draftPick) > 0));
+    return _draftResultsLoaded;
+  }
+
   function computeStartupValue(prospect) {
+    // Undrafted → uniformly near-zero regardless of position: use the capital-aware
+    // baseDynastyValue instead of the veteran ladder (which ignores capital and, on the
+    // deep IDP ladders, would hand an undrafted player a rosterable value). "Undrafted"
+    // = flagged UDFA, OR no NFL draft capital once draft results are in (a "Capital TBD"
+    // player who went undrafted). Pre-draft (no capital anywhere yet) we do NOT floor —
+    // fall through to the scouting cohort so the board still ranks the class.
+    const noCapital = !(prospect.draftRound || prospect.draftPick);
+    if (noCapital && (prospect.isUDFA || draftResultsLoaded())) {
+      return prospect.baseDynastyValue || prospect.draftScore || 0;
+    }
+
     const pos = prospect.mappedPos || prospect.pos;
     const posRank = prospect.rookiePosRank || 999;
     const offsets = isSuperflexLeague() ? VET_OFFSETS : VET_OFFSETS_ONE_QB;
-    const startupPosRank = posRank + (offsets[pos] || 10);
     const ladder = getPositionLadder(pos);
     if (!ladder.length) return prospect.baseDynastyValue || prospect.dynastyValue || prospect.draftScore || 0;
-    const idx = Math.min(startupPosRank - 1, ladder.length - 1);
-    return ladder[idx] || prospect.baseDynastyValue || prospect.draftScore || 0;
+
+    // Scouting cohort: in-class position rank nudged down the veteran ladder.
+    const scoutVal = ladderValueAt(ladder, posRank + (offsets[pos] || 10));
+
+    // IDP, post-draft: blend the scouting cohort with a draft-capital cohort anchored
+    // to the league's startable pool (see IDP_* constants above). Pre-draft (no
+    // round/pick) and every non-IDP position keep the pure scouting cohort.
+    const draftPick = Number(prospect.draftPick) || 0;
+    const draftRound = Number(prospect.draftRound) || (draftPick ? Math.min(7, Math.ceil(draftPick / 32)) : 0);
+    if (IDP_LADDER_POSITIONS.has(pos) && draftRound) {
+      const starters = (window.App?.LI?.starterCounts || {})[pos] || 4;
+      const poolSlot = leagueTeamCount() * starters * (IDP_ROUND_POOL_MULT[Math.min(7, Math.max(1, draftRound))] || 3.2);
+      const capitalVal = ladderValueAt(ladder, poolSlot);
+      return Math.round(IDP_CAPITAL_WEIGHT * capitalVal + (1 - IDP_CAPITAL_WEIGHT) * scoutVal)
+        || prospect.baseDynastyValue || prospect.draftScore || 0;
+    }
+
+    return scoutVal || prospect.baseDynastyValue || prospect.draftScore || 0;
   }
 
   function enrichWithDynastyValue(prospect) {
