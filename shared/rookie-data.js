@@ -42,6 +42,17 @@
   const IDP_LADDER_POSITIONS = new Set(['DL', 'LB', 'DB']);
   const IDP_ROUND_POOL_MULT = { 1: 0.3, 2: 0.6, 3: 1.0, 4: 1.4, 5: 1.9, 6: 2.5, 7: 3.2 };
   const IDP_CAPITAL_WEIGHT = 0.8; // 80% draft capital / 20% scouting, post-draft
+  // OFFENSE rookie ceiling (QB/RB/WR/TE), post-draft only. The veteran scoutVal maps a
+  // rookie onto the position ladder by in-class posRank, which on thin/shallow offense
+  // classes lets a late-round rookie land on a rosterable veteran's score (a R7 QB was
+  // getting ~3,900 ≈ QB18). Cap scoutVal at a ceiling implied by NFL draft capital: each
+  // round maps to a fraction of the position ladder's depth (R1 ≈ top → never binds on
+  // elites; R7 ≈ deep → collapses toward base). Floored by the capital-aware
+  // baseDynastyValue so a well-scouted faller never drops below its own base. Strictly
+  // increasing in round → the ceiling is monotone non-increasing by capital. This is the
+  // offense analog of the IDP capital cohort, tuned to the SHALLOW offense ladders (a
+  // depth fraction rather than teams×starters×mult). Pre-draft and IDP are untouched.
+  const OFFENSE_ROUND_CEIL_FRAC = { 1: 0.05, 2: 0.12, 3: 0.22, 4: 0.35, 5: 0.52, 6: 0.72, 7: 0.95 };
 
   const cache = {
     loaded: false,
@@ -632,6 +643,19 @@
       const capitalVal = ladderValueAt(ladder, poolSlot);
       return Math.round(IDP_CAPITAL_WEIGHT * capitalVal + (1 - IDP_CAPITAL_WEIGHT) * scoutVal)
         || prospect.baseDynastyValue || prospect.draftScore || 0;
+    }
+
+    // OFFENSE (QB/RB/WR/TE), post-draft (capital known): clamp scoutVal to a draft-capital
+    // ceiling so a late-round rookie can't inherit a startable veteran's score off a thin
+    // position class. Pre-draft (draftRound === 0) is skipped → pure scouting, ranks the
+    // class as before. The ceiling is floored by the capital-aware base so a great scout on
+    // a faller keeps scout-driven ordering BELOW the ceiling and never drops under its base.
+    if (draftRound) {
+      const ceilFrac = OFFENSE_ROUND_CEIL_FRAC[Math.min(7, Math.max(1, draftRound))] || 0.95;
+      const ceilSlot = Math.round(ladder.length * ceilFrac);
+      const capitalCeiling = Math.max(ladderValueAt(ladder, ceilSlot), prospect.baseDynastyValue || 0);
+      const cappedVal = Math.min(scoutVal, capitalCeiling);
+      return cappedVal || prospect.baseDynastyValue || prospect.draftScore || 0;
     }
 
     return scoutVal || prospect.baseDynastyValue || prospect.draftScore || 0;
