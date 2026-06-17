@@ -1,23 +1,32 @@
 # Shared Code Contract
 
-**ReconAI (`reconai/`) is the canonical owner of all shared logic.**
-War Room (`warroom/`) consumes it via CDN at runtime.
+**The neutral `C2-Football/dhq-shared` repo is the canonical owner of all shared
+engine logic.** Both ReconAI/Scout (`reconai/`) and War Room (`warroom/`) vendor
+these 30 modules into their own build — neither app depends on the other's repo.
+
+In this repo the 30 modules live in `shared/` but are **gitignored**: they are
+copied in from dhq-shared by `npm run sync:shared` (runs automatically on
+`dev`/`build`/`start`). Do not edit them here — edits made in `shared/` are
+overwritten on the next sync. The Scout-only modules in `shared/`
+(`dev-preview-config.js`, `data-cache.js`, `season-calendar.js`,
+`roster-snapshot.js`, `league-memory.js`) are tracked and owned by this repo.
 
 ---
 
-## CDN Base URL
+## Source of truth
 
 ```
-https://jcc100218.github.io/ReconAI/shared/
+C2-Football/dhq-shared   (30 modules + manifest.json)
 ```
 
-War Room production pages load shared scripts from this URL through
-`js/shared/shared-loader.js`. Any change to a file in `reconai/shared/` is
-live to War Room after the next GitHub Pages deploy and War Room cache-bust.
+ReconAI bundles these into its Vite build (`main.js` side-effect imports);
+War Room vendors them into `reconai-shared/` and loads them as classic scripts.
+A change is live in each app after that app's own next deploy — no runtime CDN
+dependency between the apps.
 
 ---
 
-## Shared Files (owned by ReconAI, consumed by War Room)
+## Shared Files (owned by dhq-shared, vendored by both apps)
 
 | File | Purpose | Key exports |
 |------|---------|-------------|
@@ -158,10 +167,10 @@ function.
 
 ## Making Changes
 
-- **Changing a shared constant** — edit `reconai/shared/constants.js` only. Verify the fallback value in `warroom/js/core.js` matches, then update it if needed.
-- **Changing `posColor()`** — update `POS_COLORS` in `constants.js`. `posColor()` delegates automatically.
-- **Adding a new shared function** — add to the appropriate `reconai/shared/` file, then add a fallback in `warroom/js/core.js` with the `|| fallback` pattern.
-- **Adding a new constant** — add to `reconai/shared/constants.js` and add a matching fallback in `warroom/js/core.js`.
+- **Changing a shared constant** — edit `constants.js` in the `dhq-shared` repo only (NOT `reconai/shared/constants.js`, which is a vendored copy). Verify the fallback value in `warroom/js/core.js` matches, then update it if needed.
+- **Changing `posColor()`** — update `POS_COLORS` in `dhq-shared/constants.js`. `posColor()` delegates automatically.
+- **Adding a new shared function** — add to the appropriate `dhq-shared` module, then add a fallback in `warroom/js/core.js` with the `|| fallback` pattern.
+- **Adding a new constant** — add to `dhq-shared/constants.js` and add a matching fallback in `warroom/js/core.js`.
 
 ## Backend Ownership
 
@@ -184,4 +193,4 @@ overwrite the other's backend surface.
 - `tools/dhq-playground.html` can be opened directly in a browser to adjust league size, roster slots, scoring, and mode.
 - `npm run dhq:lab -- --data-file tools/dhq-sample-data.json` runs the same core from Node without app state.
 
-After editing any shared file: `git push origin main` in `reconai/` triggers GitHub Pages deploy (~1-2 min).
+After editing any shared module: `git push origin main` in `dhq-shared/`. Each app vendors the change on its next build (`npm run sync:shared`, which runs automatically on dev/build/deploy).
