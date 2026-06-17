@@ -42,3 +42,7 @@ shared/mock-engine.js
 shared/gm-engine.js
 shared/player-modal.js
 shared/rookie-data.js
+
+# Rookie/prospect CSVs vendored from dhq-shared/draft-war-room (npm run sync:shared);
+# served same-origin via Vite public/. Canonical source is C2-Football/dhq-shared.
+public/draft-war-room/

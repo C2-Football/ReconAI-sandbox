@@ -88,3 +88,30 @@ for (const file of FILES) {
 }
 
 console.log(`[sync-shared] Vendored ${FILES.length} shared modules from dhq-shared into shared/`);
+
+// ── Rookie/prospect CSVs (shared data) ──────────────────────────────────────
+// Vendored from dhq-shared/draft-war-room into public/draft-war-room so Vite
+// serves them same-origin at <base>/draft-war-room/ — Scout no longer fetches
+// rookie data cross-repo from WarRoom@main via jsDelivr.
+const DATA_FILES = ['player.csv', 'player-enrichment.csv', 'data/mock_draft_db.csv'];
+const DATA_SOURCE = path.join(SOURCE, 'draft-war-room');
+const DATA_TARGET = path.join(ROOT, 'public', 'draft-war-room');
+
+if (fs.existsSync(DATA_SOURCE)) {
+  for (const file of DATA_FILES) {
+    const src = path.join(DATA_SOURCE, file);
+    if (!fs.existsSync(src)) {
+      console.error(`[sync-shared] Missing shared data file in dhq-shared: ${src}`);
+      process.exit(1);
+    }
+    const dest = path.join(DATA_TARGET, file);
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(src, dest);
+  }
+  console.log(`[sync-shared] Vendored ${DATA_FILES.length} rookie CSVs into public/draft-war-room/`);
+} else if (DATA_FILES.every(f => fs.existsSync(path.join(DATA_TARGET, f)))) {
+  console.log('[sync-shared] No draft-war-room/ in source; keeping existing vendored CSVs');
+} else {
+  console.error('[sync-shared] Missing rookie CSVs in source and locally');
+  process.exit(1);
+}

@@ -49,3 +49,10 @@ import './js/trade-builder.js';
 import './js/scout-ui.js';
 import './js/pro-launch.js';
 import './js/tutorial.js';
+
+// Rookie/prospect CSVs are vendored into public/draft-war-room/ and served
+// same-origin (Vite base = /ReconAI/), so Scout no longer fetches rookie data
+// cross-repo from WarRoom@main via jsDelivr. Point the shared rookie-data loader
+// at our own deploy explicitly (page-independent); rookie-data.js's default is
+// also same-origin-relative. Runs after imports but before any on-demand fetch.
+window.ROOKIE_DATA_BASE = `${window.location.origin}${import.meta.env.BASE_URL}draft-war-room`;
