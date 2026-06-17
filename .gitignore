@@ -5,3 +5,40 @@ dist/
 .env.local
 .env.*.local
 .DS_Store
+
+# ── Vendored shared engine ──────────────────────────────────────────────────
+# Canonical source is the neutral C2-Football/dhq-shared repo; these 30 files are
+# copied in by `npm run sync:shared` (runs automatically on dev/build/start).
+# Gitignored so dhq-shared stays the single source of truth. The Scout-only
+# modules in shared/ (data-cache.js, dev-preview-config.js, league-memory.js,
+# roster-snapshot.js, season-calendar.js) are NOT ignored — they stay tracked.
+shared/app-config.js
+shared/bug-capture.js
+shared/constants.js
+shared/utils.js
+shared/storage.js
+shared/event-bus.js
+shared/platform-provider.js
+shared/sleeper-api.js
+shared/espn-api.js
+shared/mfl-api.js
+shared/yahoo-api.js
+shared/supabase-client.js
+shared/tier.js
+shared/pick-value-model.js
+shared/dhq-providers.js
+shared/dhq-core.js
+shared/intelligence-context.js
+shared/dhq-engine.js
+shared/nfl-fit.js
+shared/team-assess.js
+shared/analytics-engine.js
+shared/dhq-ai.js
+shared/assistant-tutorial.js
+shared/ai-dispatch.js
+shared/strategy.js
+shared/trade-engine.js
+shared/mock-engine.js
+shared/gm-engine.js
+shared/player-modal.js
+shared/rookie-data.js
