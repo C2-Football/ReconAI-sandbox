@@ -2171,26 +2171,45 @@ function _buildLineupState(){
   }).filter(Boolean);
 
   const flexMap={SUPER_FLEX:['QB','RB','WR','TE'],WRTQ:['QB','RB','WR','TE'],FLEX:['RB','WR','TE'],REC_FLEX:['WR','TE'],IDP_FLEX:['DL','LB','DB']};
+  const _slotLabel=slot=>slot==='SUPER_FLEX'?'SF':slot==='IDP_FLEX'?'IDP_FLX':slot==='REC_FLEX'?'R_FLX':flexMap[slot]?'FLX':slot;
   const used=new Set();
-  const lineup=[];
+  let lineup=[];
 
-  // Fixed positions first
-  starterSlots.filter(s=>!flexMap[s]).forEach(slot=>{
-    const pos=normPos(slot)||slot;
-    const displaySlot=slot;
-    const best=scored.filter(p=>p.pos===pos&&!used.has(p.pid)).sort((a,b)=>b.score-a.score)[0];
-    if(best){used.add(best.pid);lineup.push({slot:displaySlot,player:best,isFlex:false});}
-    else lineup.push({slot:displaySlot,player:null,isFlex:false});
-  });
+  // Exact, slot-aware optimal lineup via the engine (provably optimal for nested
+  // SF/FLEX/IDP-FLEX eligibility, where the old greedy could misassign). Greedy fallback.
+  const SS=window.App&&window.App.StartSit;
+  let _solved=false;
+  if(SS&&typeof SS.optimalLineupWeekly==='function'){
+    try{
+      const byPid={};scored.forEach(p=>{byPid[p.pid]=p;});
+      const players=scored.map(p=>({pid:p.pid,pos:p.pos,available:true,pts:p.score}));
+      const opt=SS.optimalLineupWeekly(players,starterSlots);
+      const slots=opt&&(opt.slots||opt.starters);
+      if(Array.isArray(slots)&&slots.length){
+        lineup=slots.map(s=>{const player=s.pid?(byPid[s.pid]||null):null;if(player)used.add(player.pid);return{slot:_slotLabel(s.slot),player,isFlex:!!flexMap[s.slot]};});
+        _solved=true;
+      }
+    }catch(e){_solved=false;}
+  }
+  if(!_solved){
+    // Greedy fallback: fixed positions first, then flex by score.
+    starterSlots.filter(s=>!flexMap[s]).forEach(slot=>{
+      const pos=normPos(slot)||slot;
+      const best=scored.filter(p=>p.pos===pos&&!used.has(p.pid)).sort((a,b)=>b.score-a.score)[0];
+      if(best){used.add(best.pid);lineup.push({slot,player:best,isFlex:false});}
+      else lineup.push({slot,player:null,isFlex:false});
+    });
+    starterSlots.filter(s=>flexMap[s]).forEach(slot=>{
+      const eligible=flexMap[slot]||[];
+      const best=scored.filter(p=>eligible.includes(p.pos)&&!used.has(p.pid)).sort((a,b)=>b.score-a.score)[0];
+      if(best){used.add(best.pid);lineup.push({slot:_slotLabel(slot),player:best,isFlex:true});}
+      else lineup.push({slot:_slotLabel(slot),player:null,isFlex:true});
+    });
+  }
 
-  // Flex slots
-  starterSlots.filter(s=>flexMap[s]).forEach(slot=>{
-    const eligible=flexMap[slot]||[];
-    const best=scored.filter(p=>eligible.includes(p.pos)&&!used.has(p.pid)).sort((a,b)=>b.score-a.score)[0];
-    const label=slot==='SUPER_FLEX'?'SF':slot==='IDP_FLEX'?'IDP_FLX':slot==='REC_FLEX'?'R_FLX':'FLX';
-    if(best){used.add(best.pid);lineup.push({slot:label,player:best,isFlex:true});}
-    else lineup.push({slot:label,player:null,isFlex:true});
-  });
+  // Clean display grouping order so section headers stay contiguous.
+  const _grpOrder={QB:0,RB:1,WR:2,TE:3,FLX:4,SF:4,R_FLX:4,K:5,DL:6,LB:6,DB:6,IDP_FLX:7,DEF:8};
+  lineup.sort((a,b)=>((_grpOrder[a.slot]??9)-(_grpOrder[b.slot]??9)));
 
   // Bench alternatives by position
   const benchByPos={};
@@ -2307,8 +2326,8 @@ function _renderStartersView(analyzed){
     const slot=l.slot;
     let group='';
     if(offPos.has(slot))group=slot;
-    else if(idpPos.has(slot))group='IDP';
-    else if(['FLX','SF','R_FLX','IDP_FLX'].includes(slot))group='FLEX';
+    else if(idpPos.has(slot)||slot==='IDP_FLX')group='IDP';
+    else if(['FLX','SF','R_FLX'].includes(slot))group='FLEX';
     else group=slot;
 
     if(group!==lastGroup){
