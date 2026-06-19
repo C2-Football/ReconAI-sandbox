@@ -37,6 +37,18 @@ import './shared/espn-api.js';
 import './shared/mfl-api.js';
 import './shared/yahoo-api.js';
 
+// WS0: browser engines promoted from War Room into dhq-shared (start/sit, weekly proj,
+// NFL context, matchup, ROS value, draft gameplan, Alex voice, GM mode). Order matters:
+// startsit before weekly-proj/matchup/player-value; player-value after dhq-engine (guarded globals).
+import './shared/startsit-engine.js';
+import './shared/weekly-proj.js';
+import './shared/nfl-context.js';
+import './shared/matchup.js';
+import './shared/player-value.js';
+import './shared/draft-gameplan.js';
+import './shared/alex-voice.js';
+import './shared/gm-mode.js';
+
 import './js/app.js';
 import './js/sleeper-api.js';
 import './js/ai-chat.js';

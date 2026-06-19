@@ -50,6 +50,15 @@ const FILES = [
   'gm-engine.js',
   'player-modal.js',
   'rookie-data.js',
+  // WS0: browser engines promoted from War Room into dhq-shared
+  'startsit-engine.js',
+  'weekly-proj.js',
+  'nfl-context.js',
+  'matchup.js',
+  'player-value.js',
+  'draft-gameplan.js',
+  'alex-voice.js',
+  'gm-mode.js',
 ];
 
 function findSourceDir() {
