@@ -560,6 +560,49 @@ function _scoutBriefLead() {
 }
 window._scoutBriefLead = _scoutBriefLead;
 
+// "Since you last opened" — snapshots league state per league, diffs current vs the
+// stored snapshot, then re-baselines. Computed once per session (cached by league).
+let _wcCache, _wcCacheLeague;
+function _scoutWhatChanged() {
+  const S = window.S;
+  if (_wcCache !== undefined && _wcCacheLeague === (S && S.currentLeagueId)) return _wcCache;
+  const myRoster = typeof myR === 'function' ? myR() : null;
+  if (!myRoster || !S || !S.currentLeagueId || !(S.rosters || []).length) return null; // not ready — don't cache yet
+  try {
+    const w = myRoster.settings?.wins || 0, l = myRoster.settings?.losses || 0;
+    let rank = null;
+    try {
+      if (typeof window.assessAllTeamsFromGlobal === 'function') {
+        const all = window.assessAllTeamsFromGlobal() || [];
+        if (all.length) { const sorted = [...all].sort((a, b) => (b.healthScore || 0) - (a.healthScore || 0)); const idx = sorted.findIndex(t => String(t.rosterId) === String(myRoster.roster_id)); if (idx >= 0) rank = idx + 1; }
+      }
+    } catch (e) { /* rank optional */ }
+    const txns = Array.isArray(S.transactions) ? S.transactions.length : (S.transactions ? Object.keys(S.transactions).length : 0);
+    const inj = {};
+    (myRoster.players || []).forEach(pid => { const st = S.players?.[pid]?.injury_status; if (st) inj[pid] = st; });
+    const cur = { rank, record: `${w}-${l}`, txns, inj };
+
+    const key = 'scout_brief_snap_v1_' + S.currentLeagueId;
+    let prev = null;
+    try { const raw = localStorage.getItem(key); if (raw) prev = JSON.parse(raw); } catch (e) {}
+    const sinceTs = prev && prev.ts;
+    try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), state: cur })); } catch (e) {}
+
+    _wcCacheLeague = S.currentLeagueId;
+    if (!prev || !prev.state) { _wcCache = null; return null; } // first look at this league
+    const p = prev.state, changes = [];
+    if (p.rank && cur.rank && p.rank !== cur.rank) { const up = cur.rank < p.rank; changes.push({ icon: up ? '▲' : '▼', tone: up ? 'up' : 'down', label: 'Power rank', val: `#${p.rank} → #${cur.rank}` }); }
+    if (p.record !== cur.record && cur.record !== '0-0') changes.push({ icon: '•', tone: '', label: 'Record', val: `${p.record} → ${cur.record}` });
+    if (cur.txns > (p.txns || 0)) changes.push({ icon: '⇄', tone: '', label: 'League moves', val: `${cur.txns - (p.txns || 0)} new` });
+    Object.keys(cur.inj).filter(pid => cur.inj[pid] && cur.inj[pid] !== (p.inj && p.inj[pid])).slice(0, 2).forEach(pid => changes.push({ icon: '⚠', tone: 'warn', label: (typeof pName === 'function' ? pName(pid) : pid), val: String(cur.inj[pid]).toLowerCase() }));
+    Object.keys(p.inj || {}).filter(pid => !cur.inj[pid]).slice(0, 1).forEach(pid => changes.push({ icon: '✓', tone: 'up', label: (typeof pName === 'function' ? pName(pid) : pid), val: 'cleared' }));
+
+    _wcCache = changes.length ? { changes, sinceTs } : null;
+    return _wcCache;
+  } catch (e) { _wcCacheLeague = S.currentLeagueId; _wcCache = null; return null; }
+}
+window._scoutWhatChanged = _scoutWhatChanged;
+
 function renderScoutBriefing() {
   const titleEl = document.getElementById('scout-briefing-title');
   const countEl = document.getElementById('scout-briefing-count');
@@ -1286,6 +1329,15 @@ function renderWarRoomBrief() {
   const nextRows = _scoutNextMoveRows(nextMove, phase, health);
   const nextMoveContract = _scoutBuildNextMoveContract(nextMove, league, roster, assessment, strategy, phase, health);
   const _heroLead = (typeof _scoutBriefLead === 'function') ? _scoutBriefLead() : '';
+  const _whatChanged = (typeof _scoutWhatChanged === 'function') ? _scoutWhatChanged() : null;
+  const _wcSince = _whatChanged && _whatChanged.sinceTs && typeof _relativeTime === 'function' ? _relativeTime(_whatChanged.sinceTs) : '';
+  const _wcTone = t => t === 'up' ? 'var(--green)' : t === 'down' ? 'var(--red)' : t === 'warn' ? 'var(--amber)' : 'var(--text3)';
+  const _whatChangedHtml = (_whatChanged && _whatChanged.changes.length) ? `<section class="scout-brief-section">
+      <div><span class="scout-kicker">Since you last opened${_wcSince ? ' · ' + _esc(_wcSince) : ''}</span><h2>What changed</h2></div>
+      <div style="display:flex;flex-direction:column;gap:9px;margin-top:10px">
+        ${_whatChanged.changes.map(c => `<div style="display:flex;align-items:center;gap:9px;font-size:13px"><span style="color:${_wcTone(c.tone)};width:14px;text-align:center;flex-shrink:0">${c.icon}</span><span style="flex:1;color:var(--text2)">${_esc(c.label)}</span><span class="mono" style="color:var(--text3);white-space:nowrap">${_esc(c.val)}</span></div>`).join('')}
+      </div>
+    </section>` : '';
 
   if (!S.user) {
     host.innerHTML = `<div class="scout-brief-shell">
@@ -1346,6 +1398,8 @@ function renderWarRoomBrief() {
         ${diagnosis.line2 ? `<p>${_esc(diagnosis.line2)}</p>` : ''}
       </div>
     </section>
+
+    ${_whatChangedHtml}
 
     ${_scoutDriftCard()}
 
