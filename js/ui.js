@@ -279,17 +279,26 @@ function buildRosterTable(){
   const offPos=new Set(['QB','RB','WR','TE','K']);
   const idpPos=new Set(['DL','LB','DB']);
 
+  // Engine this-week projection (reuses the Start/Sit WeeklyProj wiring); skill positions only.
+  const _WP=window.App&&window.App.WeeklyProj;
+  const _wkScoring=league?.scoring_settings||{};
+  const _wkWeek=Number(S.currentWeek)||(_WP&&_WP.currentWeek&&_WP.currentWeek())||1;
+  let _wkStats=null,_wkPrior=null;
+  if(_WP&&S.playerStats){_wkStats={};_wkPrior={};for(const _pid of allPlayers){const _ps=S.playerStats[_pid];if(!_ps)continue;if(_ps.curRawStats)_wkStats[_pid]=_ps.curRawStats;if(_ps.prevRawStats)_wkPrior[_pid]=_ps.prevRawStats;}}
+
   let rows=allPlayers.map(pid=>{
     const p=S.players[pid]||{};
     const stats=S.playerStats?.[pid]||{};
     const val=dynastyValue(pid);
     const pk=peakYears(pid);
+    let wk=null;
+    if(_WP&&['QB','RB','WR','TE'].includes(pPos(pid))){try{const _pr=_WP.projectPlayer(pid,{playersData:S.players,statsData:_wkStats,priorData:_wkPrior,scoring:_wkScoring,week:_wkWeek});if(_pr&&_pr.points&&_pr.available!==false)wk=+_pr.points.median||null;}catch(e){/* omit on failure */}}
     const slotIdx=[...starters].indexOf(pid);
     const isTaxi=taxi.has(pid);
     const isRes=reserve.has(pid);
     const slot=slotIdx>=0?(positions[slotIdx]||'FLEX'):isRes?'IR':isTaxi?'Taxi':pPos(pid)||'BN';
     return{
-      pid,p,stats,val,pk,slot,
+      pid,p,stats,val,pk,slot,wk,
       isStarter:starters.has(pid),isReserve:isRes,isTaxi,
       pos:pPos(pid)||'?',name:pName(pid),
       age:p.age||99,value:val,
@@ -326,7 +335,7 @@ function buildRosterTable(){
   let lastSection='';
 
   rows.forEach(r=>{
-    const {pid,p,stats,val,pk,isStarter,isReserve,isTaxi,pos,age}=r;
+    const {pid,p,stats,val,pk,isStarter,isReserve,isTaxi,pos,age,wk}=r;
 
     // Section headers
     const section=(r.isReserve||r.isTaxi)?(r.isReserve?'IR / Reserve':'Taxi Squad'):'';
@@ -367,6 +376,7 @@ function buildRosterTable(){
           <span>${p.team||'FA'} · ${age||'?'}</span>
           <span class="rr-val" style="color:${col};font-weight:700;font-family:'JetBrains Mono',monospace">${val>0?val.toLocaleString():'—'}${trendHtml}</span>
           ${ppg?'<span>'+ppg.toFixed(1)+'</span>':''}
+          ${wk!=null?'<span class="mono" style="color:var(--text2)" title="This-week projection (engine)">Wk '+wk.toFixed(1)+'</span>':''}
           <span style="color:${phaseCol};font-size:11px;font-weight:600">${pk.label}</span>
         </div>
       </div>
