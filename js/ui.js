@@ -2131,14 +2131,33 @@ function _buildLineupState(){
   const myPids=my.players||[];
   if(!myPids.length)return null;
 
+  // Engine-quality weekly projections (WS0 vendored App.WeeklyProj/App.StartSit into Scout).
+  // Skill positions project a league-scored stat line (floor/median/ceiling); K/DEF/IDP and
+  // any failure fall back to the season-average heuristic so this never regresses.
+  const WP=window.App&&window.App.WeeklyProj;
+  const scoring=league.scoring_settings||{};
+  const week=Number(S.currentWeek)||(WP&&WP.currentWeek&&WP.currentWeek())||1;
+  let statsData=null,priorData=null;
+  if(WP&&S.playerStats){
+    statsData={};priorData={};
+    for(const pid of myPids){const ps=S.playerStats[pid];if(!ps)continue;if(ps.curRawStats)statsData[pid]=ps.curRawStats;if(ps.prevRawStats)priorData[pid]=ps.prevRawStats;}
+  }
   const scored=myPids.map(pid=>{
     const p=S.players?.[pid];if(!p)return null;
-    const stats=S.playerStats?.[pid]||{};
-    const proj=S.playerProj?.[pid]||0;
-    const ppg=stats.seasonAvg||stats.trail3||stats.prevAvg||0;
-    const score=proj||ppg;
     const pos=normPos(p.position)||p.position;
-    return{pid,pos,score,name:p.full_name||pName(pid),team:p.team||'FA',injury:p.injury_status};
+    let score=null,floor=null,ceiling=null,projSrc='ppg';
+    if(WP&&['QB','RB','WR','TE'].includes(pos)){
+      try{
+        const pr=WP.projectPlayer(pid,{playersData:S.players,statsData,priorData,scoring,week});
+        if(pr&&pr.points){score=(pr.available===false)?0:(+pr.points.median||0);floor=pr.points.floor??null;ceiling=pr.points.ceiling??null;projSrc='engine';}
+      }catch(e){/* fall back to heuristic */}
+    }
+    if(score===null){
+      const stats=S.playerStats?.[pid]||{};
+      const projv=S.playerProj?.[pid]||0;
+      score=projv||(stats.seasonAvg||stats.trail3||stats.prevAvg||0);projSrc='ppg';
+    }
+    return{pid,pos,score,floor,ceiling,projSrc,name:p.full_name||pName(pid),team:p.team||'FA',injury:p.injury_status};
   }).filter(Boolean);
 
   const flexMap={SUPER_FLEX:['QB','RB','WR','TE'],WRTQ:['QB','RB','WR','TE'],FLEX:['RB','WR','TE'],REC_FLEX:['WR','TE'],IDP_FLEX:['DL','LB','DB']};
@@ -2320,6 +2339,7 @@ function _renderStartersView(analyzed){
       </div>
       <div class="lu-score-col">
         <div class="lu-score" style="color:${scoreCol}">${p.score.toFixed(1)}</div>
+        ${(p.floor!=null&&p.ceiling!=null)?`<div class="mono" style="font-size:10px;color:var(--text3);white-space:nowrap;margin-top:1px">${p.floor.toFixed(0)}–${p.ceiling.toFixed(0)}</div>`:''}
         <div class="lu-confidence ${confLabelCls}">${confLabel}</div>
       </div>
       <div class="lu-chevron"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>

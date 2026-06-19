@@ -223,6 +223,65 @@ function renderDraftEntryPicks() {
 }
 window.renderDraftEntryPicks = renderDraftEntryPicks;
 
+// ── Draft gameplan: archetype picker + round-by-round blueprint ───
+// Surfaces the shared App.DraftGameplan engine (WS0-vendored) in Scout's
+// draft entry view. Pure/year-round: derives the blueprint from the league's
+// roster slots + scoring, so it works offseason with no scheduled draft.
+let _draftGameplanArch = 'balanced';
+function setDraftGameplanArch(k) { _draftGameplanArch = k; renderDraftGameplan(); }
+window.setDraftGameplanArch = setDraftGameplanArch;
+
+function renderDraftGameplan() {
+  const el = document.getElementById('draft-entry-gameplan');
+  if (!el) return;
+  const DG = window.App && window.App.DraftGameplan;
+  const S = window.S || {};
+  const league = S.leagues?.find(l => l.league_id === S.currentLeagueId);
+  if (!DG || !league || !league.roster_positions || !league.roster_positions.length) { el.innerHTML = ''; return; }
+  // Full roster build (engine front-loads offense, tails K/DEF/IDP). Capping
+  // rounds would crowd out RB/WR in deep-IDP leagues, so build full and cap the DISPLAY.
+  let plan;
+  try { plan = DG.build(league); } catch (e) { el.innerHTML = ''; return; }
+  if (!plan || !plan.archetypes || !plan.archetypes.length) { el.innerHTML = ''; return; }
+  if (!plan.archetypes.find(a => a.key === _draftGameplanArch)) _draftGameplanArch = plan.archetypes[0].key;
+  const sel = plan.archetypes.find(a => a.key === _draftGameplanArch) || plan.archetypes[0];
+
+  const POSC = { QB: 'var(--blue)', RB: 'var(--green)', WR: 'var(--blue)', TE: 'var(--amber)', K: 'var(--text2)', DEF: 'var(--red)', IDP: '#fb923c' };
+  const esc = window.escHtml || (s => String(s));
+
+  const chips = plan.archetypes.map(a => {
+    const on = a.key === sel.key;
+    return `<button onclick="setDraftGameplanArch('${a.key}')" style="flex:0 0 auto;font-size:12px;font-weight:600;padding:7px 11px;border-radius:16px;cursor:pointer;font-family:inherit;white-space:nowrap;border:1px solid ${on ? 'rgba(212,175,55,.32)' : 'var(--border2)'};background:${on ? 'var(--accentL)' : 'transparent'};color:${on ? 'var(--accent)' : 'var(--text2)'}">${esc(a.label)}</button>`;
+  }).join('');
+
+  const tg = sel.targets || {};
+  const tgPills = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF', 'IDP'].filter(p => tg[p] > 0).map(p =>
+    `<span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text2)"><span style="color:${POSC[p]};font-weight:700">${p}</span> ${tg[p]}</span>`
+  ).join('<span style="color:var(--text3);margin:0 2px">·</span>');
+
+  const _shown = (sel.picks || []).slice(0, 14);
+  const _more = (sel.picks || []).length - _shown.length;
+  const rounds = _shown.map(p =>
+    `<div style="flex:0 0 auto;text-align:center;min-width:38px;padding:6px 4px;background:var(--bg3);border-radius:8px">
+       <div style="font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace">R${p.round}</div>
+       <div style="font-size:12px;font-weight:700;color:${POSC[p.pos] || 'var(--text2)'};margin-top:2px">${p.pos}</div>
+     </div>`
+  ).join('') + (_more > 0 ? `<div style="flex:0 0 auto;display:flex;align-items:center;padding:0 8px;font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace">+${_more} rd</div>` : '');
+
+  el.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:12px 14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em">Draft Gameplan</span>
+        <span style="font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace">${plan.superflex ? 'SF' : '1QB'} · ${esc(plan.ppr)}${plan.tePremium ? ' · TE-prem' : ''} · ${plan.rounds} rd</span>
+      </div>
+      <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px">${chips}</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:10px">${esc(sel.blurb)}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:11px">${tgPills}</div>
+      <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px">${rounds}</div>
+    </div>`;
+}
+window.renderDraftGameplan = renderDraftGameplan;
+
 // ── DNA intel strip for mock draft on-the-clock ──────────────
 function _renderDNAIntelStrip(round) {
   const LI = window.LI || {};

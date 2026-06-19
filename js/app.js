@@ -183,6 +183,7 @@ function switchTab(tab,btn){
     if(typeof window.exitDraftRoom==='function')window.exitDraftRoom();
     if(typeof window._refreshDraftEntrySubtitles==='function')window._refreshDraftEntrySubtitles();
     if(typeof window.renderDraftEntryPicks==='function')window.renderDraftEntryPicks();
+    if(typeof window.renderDraftGameplan==='function')window.renderDraftGameplan();
     const draftDirectMode = window._draftDirectMode;
     window._draftDirectMode = null;
     if(draftDirectMode&&typeof window.enterDraftRoom==='function'){
