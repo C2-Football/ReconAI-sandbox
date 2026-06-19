@@ -503,6 +503,63 @@ function toggleScoutBriefing() {
 }
 window.toggleScoutBriefing = toggleScoutBriefing;
 
+// Alex's field-brief lead: greeting + league situation (record · power rank · tier · forward read),
+// voiced via AlexVoice for non-robotic variation. Template-first (instant); AI-swap is a follow-up.
+function _scoutBriefLead() {
+  const S = window.S;
+  const myRoster = typeof myR === 'function' ? myR() : null;
+  if (!myRoster) return '';
+  const AV = window.AlexVoice;
+  const pick = (s, arr) => (AV && AV.pick) ? AV.pick(s, arr) : arr[0];
+  const esc = window._esc || (s => String(s));
+  const nameSafe = esc(String(S.user?.display_name || S.user?.username || 'GM').split(/\s+/)[0]);
+
+  const assess = typeof window.assessTeamFromGlobal === 'function' ? window.assessTeamFromGlobal(myRoster.roster_id) : null;
+  const w = myRoster.settings?.wins || 0, l = myRoster.settings?.losses || 0, total = w + l;
+  const hs = assess?.healthScore || 0;
+  const tier = (assess?.tier || '').toLowerCase();
+  const n0 = (assess?.needs || [])[0];
+  const topNeed = n0 ? esc(typeof n0 === 'string' ? n0 : n0.pos) : '';
+
+  // Power rank by roster strength (health score) across the league.
+  let rank = null, size = null;
+  try {
+    if (typeof window.assessAllTeamsFromGlobal === 'function') {
+      const all = window.assessAllTeamsFromGlobal() || [];
+      if (all.length) {
+        const sorted = [...all].sort((a, b) => (b.healthScore || 0) - (a.healthScore || 0));
+        size = sorted.length;
+        const idx = sorted.findIndex(t => String(t.rosterId) === String(myRoster.roster_id));
+        if (idx >= 0) rank = idx + 1;
+      }
+    }
+  } catch (e) { /* rank optional */ }
+
+  const cal = window.SeasonCalendar?.describe ? window.SeasonCalendar.describe(_scoutCurrentLeague()) : null;
+  const seed = `${myRoster.roster_id}|${w}.${l}|${rank}|${hs}`;
+  const hour = new Date().getHours();
+  const tod = hour < 12 ? 'Morning' : hour < 18 ? 'Afternoon' : 'Evening';
+
+  const greet = pick(seed + 'g', [`${tod}, ${nameSafe}.`, `${tod} brief, ${nameSafe}.`, `Here's the read, ${nameSafe}.`]);
+  const recordBit = total > 0 ? `You're <b style="color:var(--text)">${w}–${l}</b>` : `Roster's locked in`;
+  const rankBit = (rank && size) ? ` and <b style="color:var(--text)">#${rank}</b> of ${size} by roster strength` : '';
+  const tierWord = tier ? tier.charAt(0).toUpperCase() + tier.slice(1) : '';
+  const tierBit = tierWord ? ` — ${pick(seed + 't', [`${tierWord.toLowerCase()} class`, `squarely ${tierWord.toLowerCase()} tier`, `a ${tierWord.toLowerCase()} build`])}` : '';
+  const situation = `${recordBit}${rankBit}${tierBit}.`;
+
+  let read;
+  if (cal && (cal.phase === 'pre_draft' || cal.phase === 'draft_week')) {
+    read = pick(seed + 'r', [`Draft's the lever right now — here's where to aim.`, `Rookie draft's close; line up your board below.`]);
+  } else if (topNeed) {
+    read = pick(seed + 'r', [`Biggest lever is <b style="color:var(--text)">${topNeed}</b> — the moves below get you there.`, `Tighten up <b style="color:var(--text)">${topNeed}</b> and this roster climbs. Start here.`, `<b style="color:var(--text)">${topNeed}</b> is the gap to close — two ways below.`]);
+  } else {
+    read = pick(seed + 'r', [`Roster's in good shape — here's what's worth a look.`, `A few things worth your attention below.`]);
+  }
+
+  return `<b style="color:var(--text)">${greet}</b> ${situation} ${read}`;
+}
+window._scoutBriefLead = _scoutBriefLead;
+
 function renderScoutBriefing() {
   const titleEl = document.getElementById('scout-briefing-title');
   const countEl = document.getElementById('scout-briefing-count');
@@ -533,7 +590,11 @@ function renderScoutBriefing() {
     && !canAccess(window.FEATURES?.BRIEFING_REASONING || 'briefing_reasoning');
   const _feat = window.FEATURES?.BRIEFING_REASONING || 'briefing_reasoning';
 
-  itemsEl.innerHTML = items.map(item => {
+  // Alex's field-brief lead — greeting + league situation, voiced via AlexVoice (template-first).
+  const _leadTxt = (typeof _scoutBriefLead === 'function') ? _scoutBriefLead() : '';
+  const _briefLead = _leadTxt ? `<div class="scout-brief-lead" style="display:flex;gap:10px;align-items:flex-start;padding:0 0 12px;margin-bottom:10px;border-bottom:1px solid var(--border)"><span style="width:24px;height:24px;border-radius:50%;background:var(--accent);color:#0a0a0a;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">A</span><div style="font-size:14px;line-height:1.55;color:var(--text2)">${_leadTxt}</div></div>` : '';
+
+  itemsEl.innerHTML = _briefLead + items.map(item => {
     if (_reasoningGated) {
       // Show headline and dot, but gate the "why" behind an upgrade tap
       return `
@@ -1224,6 +1285,7 @@ function renderWarRoomBrief() {
   const strategyChips = _scoutStrategyChips(strategy);
   const nextRows = _scoutNextMoveRows(nextMove, phase, health);
   const nextMoveContract = _scoutBuildNextMoveContract(nextMove, league, roster, assessment, strategy, phase, health);
+  const _heroLead = (typeof _scoutBriefLead === 'function') ? _scoutBriefLead() : '';
 
   if (!S.user) {
     host.innerHTML = `<div class="scout-brief-shell">
@@ -1279,6 +1341,7 @@ function renderWarRoomBrief() {
 
       <div class="scout-diagnosis-card">
         <span class="scout-kicker">Intelligence Briefing</span>
+        ${_heroLead ? `<p style="color:var(--text2)">${_heroLead}</p>` : ''}
         <p>${_esc(diagnosis.line1 || 'Alex is reading your roster.')}</p>
         ${diagnosis.line2 ? `<p>${_esc(diagnosis.line2)}</p>` : ''}
       </div>
