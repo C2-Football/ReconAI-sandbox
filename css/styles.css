@@ -2629,3 +2629,58 @@ input,textarea,select,[contenteditable="true"]{
   }
   .tab-anim{animation:none!important}
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   iPad / large-screen LANDSCAPE (≥1024px): persistent left nav rail +
+   width-filling content. Below 1024px Scout stays the centered phone
+   column with the bottom tab bar. Keeps the existing gold Scout UI.
+   ══════════════════════════════════════════════════════════════════ */
+@media (min-width: 1024px) {
+  /* Shell uses the full width; leave room for the fixed left rail. */
+  .app { max-width: none; margin: 0; padding-left: 88px; }
+
+  /* Bottom tab bar → persistent vertical left rail. */
+  .mobile-nav {
+    flex-direction: column;
+    top: 0; bottom: 0; left: 0;
+    transform: none;
+    width: 88px; max-width: 88px; height: 100vh;
+    border-top: none;
+    border-right: 1px solid var(--glass-border);
+    padding: 20px 0;
+    gap: 6px;
+    justify-content: flex-start;
+    align-items: stretch;
+  }
+  .mobile-nav-item { flex: 0 0 auto; min-height: 66px; gap: 6px; font-size: 12px; }
+  .mobile-nav-item svg { width: 24px; height: 24px; }
+  /* Active indicator: left-edge bar instead of the top pill. */
+  .mobile-nav-item.active::before {
+    top: 50%; left: 0; transform: translateY(-50%);
+    width: 3px; height: 24px;
+  }
+
+  /* Content breathes; centre each panel in the post-rail space. */
+  .content { padding: 24px 28px; padding-bottom: 110px; }
+  .content > .panel.active { max-width: 1240px; margin: 0 auto; }
+
+  /* Today/Brief: a tall single stack → flow the cards into two columns,
+     with the hero spanning both. (display:block — multicol is ignored on a
+     flex container, which the shell is by default.) */
+  #panel-digest .scout-brief-shell { display: block; column-count: 2; column-gap: 20px; }
+  #panel-digest .scout-brief-shell > section { break-inside: avoid; margin-bottom: 20px; }
+  #panel-digest .scout-brief-shell > .scout-brief-hero,
+  #panel-digest .scout-brief-shell > .scout-driftcard { column-span: all; }
+
+  /* List-style panels read best as a generous centred column, not full-bleed. */
+  #panel-calendar .scout-command-shell,
+  #panel-history .scout-command-shell,
+  #panel-ai .scout-command-shell { max-width: 820px; margin: 0 auto; }
+
+  /* Chat bar lives inside the content area, above the bottom edge. */
+  .global-chat-overlay {
+    left: 88px; right: 0; width: auto; max-width: 860px;
+    transform: none; margin: 0 auto;
+    bottom: 20px;
+  }
+}
