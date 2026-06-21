@@ -12,6 +12,8 @@ const SHELL_TAB_GROUPS = {
   trades: 'tools',
   draftroom: 'tools',
   league: 'tools',
+  calendar: 'tools',
+  history: 'tools',
   ai: 'ai',
   portfolio: 'tools',
 };

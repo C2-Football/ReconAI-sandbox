@@ -59,6 +59,8 @@ import './js/draft-ui.js';
 import './js/trade-calc.js';
 import './js/trade-builder.js';
 import './js/scout-ui.js';
+import './js/calendar-scout.js';
+import './js/history-scout.js';
 import './js/pro-launch.js';
 import './js/tutorial.js';
 

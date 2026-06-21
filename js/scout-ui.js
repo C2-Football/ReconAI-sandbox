@@ -40,6 +40,14 @@ const TAB_CHIPS = {
     { title: 'Audit my roster', sub: 'rank my next 3 moves' },
     { title: 'Find a trade', sub: 'based on owner DNA' },
   ],
+  calendar: [
+    { title: 'When is my trade deadline', sub: 'and other key dates' },
+    { title: 'What should I do before the draft', sub: 'offseason timeline' },
+  ],
+  history: [
+    { title: 'Who has the most titles', sub: 'all-time leaders' },
+    { title: "What's my all-time record", sub: 'wins, titles, playoffs' },
+  ],
   league: [
     { title: 'Weakest teams',      sub: 'exploit their gaps' },
     { title: 'Owner tendencies',   sub: 'behavioral patterns' },
@@ -1713,7 +1721,9 @@ function renderToolsPanel() {
     { key: 'draft', title: 'Dynamic Mock Draft', sub: 'Mock by owner tendencies, history, pick values, and trade-up/down paths.', metric: 'Mock room', action: "openDynamicMockDraft()" },
     { key: 'board', title: 'Rookie Big Board', sub: 'Manage tiers, flags, needs, and rookie targets for draft day.', metric: 'Board', action: "openRookieBigBoard()" },
     { key: 'lineup', title: 'Start/Sit Lab', sub: 'Weekly lineup decisions with projection, role, and risk context.', metric: 'Coming Soon', action: '', soon: true },
-    { key: 'league', title: 'League Intel', sub: 'Owner profiles, tendencies, market leverage, and team dossiers.', metric: `${(S.rosters || []).length || 0} teams`, action: "mobileTab('league')" }
+    { key: 'league', title: 'League Intel', sub: 'Owner profiles, tendencies, market leverage, and team dossiers.', metric: `${(S.rosters || []).length || 0} teams`, action: "mobileTab('league')" },
+    { key: 'calendar', title: 'League Calendar', sub: 'Draft, trade deadline, playoffs, waivers, and your own custom dates.', metric: 'Key dates', action: "mobileTab('calendar')" },
+    { key: 'history', title: 'League History', sub: 'Champions timeline, all-time standings, and career records.', metric: 'All-time', action: "mobileTab('history')" }
   ];
 
   host.innerHTML = `<div class="scout-command-shell">
@@ -4310,13 +4320,13 @@ function _patchMobileTab() {
     window._activeTab = tab;
     renderCtxChips(tab);
 
-    if (tab === 'league' || tab === 'fieldlog' || tab === 'ai') {
+    if (tab === 'league' || tab === 'fieldlog' || tab === 'ai' || tab === 'calendar' || tab === 'history') {
       // Handle new tabs directly
       document.querySelectorAll('.mobile-nav-item').forEach(b => b.classList.remove('active'));
       if (btn) {
         btn.classList.add('active');
       } else {
-        const idMap = { league: 'mnav-tools', fieldlog: 'mnav-tools', ai: 'mnav-ai' };
+        const idMap = { league: 'mnav-tools', fieldlog: 'mnav-tools', ai: 'mnav-ai', calendar: 'mnav-tools', history: 'mnav-tools' };
         const el = document.getElementById(idMap[tab]);
         if (el) el.classList.add('active');
       }
@@ -4327,6 +4337,8 @@ function _patchMobileTab() {
       if (tab === 'league')    window.renderLeaguePanel();
       if (tab === 'fieldlog')  renderFieldLogPanel();
       if (tab === 'ai' && typeof renderAIPanel === 'function') renderAIPanel();
+      if (tab === 'calendar' && typeof window.renderCalendarPanel === 'function') window.renderCalendarPanel();
+      if (tab === 'history' && typeof window.renderHistoryPanel === 'function') window.renderHistoryPanel();
     } else {
       // Call the original pre-patch mobileTab (which calls switchTab for panel activation)
       original(tab, btn);
@@ -4336,7 +4348,7 @@ function _patchMobileTab() {
       if (btn) {
         btn.classList.add('active');
       } else {
-        const newMap = { digest:'mnav-home', team:'mnav-team', tools:'mnav-tools', ai:'mnav-ai', draftroom:'mnav-tools', waivers:'mnav-tools', trades:'mnav-tools', roster:'mnav-team', startsit:'mnav-team', league:'mnav-tools', fieldlog:'mnav-tools', settings:null };
+        const newMap = { digest:'mnav-home', team:'mnav-team', tools:'mnav-tools', ai:'mnav-ai', draftroom:'mnav-tools', waivers:'mnav-tools', trades:'mnav-tools', roster:'mnav-team', startsit:'mnav-team', league:'mnav-tools', fieldlog:'mnav-tools', calendar:'mnav-tools', history:'mnav-tools', settings:null };
         const navId = newMap[tab];
         if (navId) { const el = document.getElementById(navId); if (el) el.classList.add('active'); }
       }
