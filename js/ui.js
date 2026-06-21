@@ -1163,6 +1163,11 @@ function renderWaiverWorkbench() {
   }
 
   const data = _wwBuildCandidateData();
+  // Depth gate: free gets the WHO (ranked adds, upgrades, gap matrix, explorer);
+  // paid gets the HOW-MUCH + competition (bid plans, market leverage, fresh drops).
+  const _wwGated = typeof canAccess === 'function' && !canAccess(window.FEATURES?.FAAB_INTELLIGENCE || 'faab_intelligence');
+  const _wwKey = window.FEATURES?.FAAB_INTELLIGENCE || 'faab_intelligence';
+  const _wwFit = c => c.needFit ? 'Need' : c.targetFit ? 'Target' : 'Value';
   const primary = data.candidates[0] || null;
   const topAdds = data.candidates.slice(0, 5);
   const upgrades = data.candidates.filter(c => c.drop && c.upgrade > 250).slice(0, 4);
@@ -1192,7 +1197,7 @@ function renderWaiverWorkbench() {
 
   const kpi = [
     ['Best add', primary ? pNameShort(primary.id) : 'None', primary ? `${primary.pos} · ${Math.round(primary.val).toLocaleString()} DHQ` : 'No targets'],
-    ['Bid plan', primary?.bid?.label || (data.faab.isFAAB ? '$0' : 'Claim'), primary?.bid?.confidence || (data.faab.isFAAB ? `$${data.faab.remaining} left` : 'Priority mode')],
+    ['Bid plan', _wwGated ? '🔒 Pro' : (primary?.bid?.label || (data.faab.isFAAB ? '$0' : 'Claim')), _wwGated ? 'Unlock FAAB intelligence' : (primary?.bid?.confidence || (data.faab.isFAAB ? `$${data.faab.remaining} left` : 'Priority mode'))],
     ['Outbid risk', `${threatCount}`, data.faab.isFAAB ? 'teams above you' : 'priority threats'],
     ['Roster slots', `${data.slots.openBench}`, 'open bench spots'],
   ];
@@ -1231,7 +1236,7 @@ function renderWaiverWorkbench() {
         ${topAdds.length ? topAdds.map((c, idx) => `<div class="ww-add-row" onclick="openPlayerModal('${c.id}')">
           <b>${idx + 1}</b>
           <div><strong>${_uiEsc(pName(c.id))}</strong><small>${c.pos} · ${c.p.team || 'FA'} · ${c.age || '?'} · ${Math.round(c.val).toLocaleString()} DHQ</small></div>
-          <aside><span>${_uiEsc(c.bid.label)}</span><small>${_uiEsc(c.needFit ? 'Need' : c.targetFit ? 'Target' : 'Value')}</small></aside>
+          <aside><span>${_uiEsc(_wwGated ? _wwFit(c) : c.bid.label)}</span><small>${_uiEsc(_wwGated ? 'Bid · Pro' : _wwFit(c))}</small></aside>
         </div>`).join('') : '<div class="ww-empty">No priority adds found.</div>'}
       </div>
 
@@ -1249,7 +1254,7 @@ function renderWaiverWorkbench() {
     <section class="ww-grid">
       <div class="ww-card">
         <div class="ww-card-head"><span>Market Leverage</span><em>${data.faab.isFAAB ? `$${data.faab.remaining} FAAB` : 'priority'}</em></div>
-        ${highestThreats.map(r => `<div class="ww-market-row ${r.remaining > data.faab.remaining ? 'danger' : ''}"><span>${_uiEsc(r.name)}</span><strong>${data.faab.isFAAB ? '$' + r.remaining : '#' + r.priority}</strong></div>`).join('') || '<div class="ww-empty">No competitor budget data.</div>'}
+        ${_wwGated ? (typeof _tierGatePlaceholder==='function'?_tierGatePlaceholder('Market Leverage', _wwKey):'') : (highestThreats.map(r => `<div class="ww-market-row ${r.remaining > data.faab.remaining ? 'danger' : ''}"><span>${_uiEsc(r.name)}</span><strong>${data.faab.isFAAB ? '$' + r.remaining : '#' + r.priority}</strong></div>`).join('') || '<div class="ww-empty">No competitor budget data.</div>')}
       </div>
 
       <div class="ww-card">
@@ -1262,7 +1267,7 @@ function renderWaiverWorkbench() {
 
     ${data.trendingDrops.length ? `<section class="ww-card">
       <div class="ww-card-head"><span>Fresh Drop Alerts</span><em>Sleeper trend</em></div>
-      ${data.trendingDrops.map(c => `<div class="ww-add-row" onclick="openPlayerModal('${c.id}')">
+      ${_wwGated ? (typeof _tierGatePlaceholder==='function'?_tierGatePlaceholder('Fresh Drop Alerts', _wwKey):'') : data.trendingDrops.map(c => `<div class="ww-add-row" onclick="openPlayerModal('${c.id}')">
         <b>↓</b><div><strong>${_uiEsc(pName(c.id))}</strong><small>${c.pos} · ${c.p.team || 'FA'} · ${Math.round(c.val).toLocaleString()} DHQ</small></div><aside><span>Review</span><small>${c.ppg ? c.ppg + ' PPG' : 'value'}</small></aside>
       </div>`).join('')}
     </section>` : ''}
@@ -1280,13 +1285,13 @@ function renderWaiverWorkbench() {
         <button onclick="_wwSetSort('fit')">Fit${_wwSort.key === 'fit' ? (_wwSort.dir > 0 ? ' ▲' : ' ▼') : ''}</button>
         <button onclick="_wwSetSort('name')">Player${_wwSort.key === 'name' ? (_wwSort.dir > 0 ? ' ▲' : ' ▼') : ''}</button>
         <button onclick="_wwSetSort('dhq')">DHQ${_wwSort.key === 'dhq' ? (_wwSort.dir > 0 ? ' ▲' : ' ▼') : ''}</button>
-        <button onclick="_wwSetSort('bid')">Bid${_wwSort.key === 'bid' ? (_wwSort.dir > 0 ? ' ▲' : ' ▼') : ''}</button>
+        ${_wwGated ? '<span style="opacity:.55">Bid 🔒</span>' : `<button onclick="_wwSetSort('bid')">Bid${_wwSort.key === 'bid' ? (_wwSort.dir > 0 ? ' ▲' : ' ▼') : ''}</button>`}
       </div>
       ${marketRows.map(c => `<div class="ww-market-item" onclick="openPlayerModal('${c.id}')">
         <span class="ww-pos">${c.pos}</span>
         <div><strong>${_uiEsc(pName(c.id))}</strong><small>${c.p.team || 'FA'} · ${c.age || '?'} · ${c.why}</small></div>
         <span>${Math.round(c.val).toLocaleString()}</span>
-        <em>${_uiEsc(c.bid.label)}</em>
+        <em>${_wwGated ? 'Pro' : _uiEsc(c.bid.label)}</em>
       </div>`).join('') || '<div class="ww-empty">No players match this search.</div>'}
     </section>
   </div>`;
@@ -2278,13 +2283,17 @@ function renderStartSit(){
   if(optBar){
     if(suboptimalCount>0){
       const gain=betterOptions.reduce((s,b)=>s+b.delta,0);
+      // Free sees that better options EXIST (a teaser), but the projected gain
+      // and the one-tap auto-optimize (which enumerates every swap) are the
+      // STARTSIT_DEPTH-gated depth — same board _renderBenchView paywalls.
+      const _ssDepth = typeof canAccess !== 'function' || canAccess(window.FEATURES?.STARTSIT_DEPTH || 'startsit_depth');
       optBar.innerHTML=`<div class="optimize-bar">
         <div class="optimize-count has-swaps">${suboptimalCount}</div>
         <div class="optimize-text">
           <div class="optimize-title">${suboptimalCount} better option${suboptimalCount>1?'s':''} found</div>
-          <div class="optimize-sub">+${gain.toFixed(1)} projected points available</div>
+          <div class="optimize-sub">${_ssDepth?`+${gain.toFixed(1)} projected points available`:'Unlock lineup depth to auto-optimize'}</div>
         </div>
-        <button class="optimize-btn" onclick="optimizeLineup()">Optimize</button>
+        ${_ssDepth?`<button class="optimize-btn" onclick="optimizeLineup()">Optimize</button>`:`<button class="optimize-btn" onclick="showUpgradePrompt(window.FEATURES?.STARTSIT_DEPTH||'startsit_depth')">Unlock</button>`}
       </div>`;
     } else {
       optBar.innerHTML=`<div class="optimize-bar clean">
@@ -2312,6 +2321,10 @@ function renderStartSit(){
 
 function _renderStartersView(analyzed){
   const wrap=$('startsit-content');if(!wrap)return;
+
+  // Depth gate: free gets median projection + the single inline swap; paid gets
+  // floor/ceiling variance bands (and the full bench upgrade ranking).
+  const _ssDepth = typeof canAccess !== 'function' || canAccess(window.FEATURES?.STARTSIT_DEPTH || 'startsit_depth');
 
   // Group by position category for section headers
   const posOrder=['QB','RB','WR','TE','FLX','SF','R_FLX','K','DL','LB','DB','IDP_FLX'];
@@ -2368,7 +2381,7 @@ function _renderStartersView(analyzed){
       </div>
       <div class="lu-score-col">
         <div class="lu-score" style="color:${scoreCol}">${p.score.toFixed(1)}</div>
-        ${(p.floor!=null&&p.ceiling!=null)?`<div class="mono" style="font-size:10px;color:var(--text3);white-space:nowrap;margin-top:1px">${p.floor.toFixed(0)}–${p.ceiling.toFixed(0)}</div>`:''}
+        ${(_ssDepth&&p.floor!=null&&p.ceiling!=null)?`<div class="mono" style="font-size:10px;color:var(--text3);white-space:nowrap;margin-top:1px">${p.floor.toFixed(0)}–${p.ceiling.toFixed(0)}</div>`:''}
         <div class="lu-confidence ${confLabelCls}">${confLabel}</div>
       </div>
       <div class="lu-chevron"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
@@ -2391,10 +2404,19 @@ function _renderBenchView(state){
   const wrap=$('lineup-bench-content');if(!wrap)return;
   const{betterOptions,allBench}=state;
 
+  // Depth gate: free sees the single inline swap (starters view) + the plain
+  // bench list; paid sees the full ranked "Upgrades Available" board.
+  const _ssDepth = typeof canAccess !== 'function' || canAccess(window.FEATURES?.STARTSIT_DEPTH || 'startsit_depth');
+
   let html='';
 
-  // Better options section
-  if(betterOptions.length){
+  // Better options section (paid depth)
+  if(!_ssDepth && betterOptions.length){
+    html+=`<div style="margin-bottom:14px">
+      <div class="lu-pos-group" style="color:var(--amber)">Upgrades Available</div>
+      ${typeof _tierGatePlaceholder==='function'?_tierGatePlaceholder(`${betterOptions.length} lineup upgrade${betterOptions.length===1?'':'s'} found`, window.FEATURES?.STARTSIT_DEPTH || 'startsit_depth'):''}
+    </div>`;
+  } else if(betterOptions.length){
     html+=`<div style="margin-bottom:14px">
       <div class="lu-pos-group" style="color:var(--amber)">Upgrades Available</div>
       ${betterOptions.map(bo=>{
@@ -2467,6 +2489,12 @@ function switchLineupView(view){
 // Optimize lineup — show diff then re-render
 function optimizeLineup(){
   if(!_luState)return;
+  // Backstop: STARTSIT_DEPTH gates the full ranked swap reveal. Even if the
+  // Optimize button is reached, free users get the upgrade prompt, not the depth.
+  if(typeof canAccess==='function' && !canAccess(window.FEATURES?.STARTSIT_DEPTH||'startsit_depth')){
+    if(typeof showUpgradePrompt==='function') showUpgradePrompt(window.FEATURES?.STARTSIT_DEPTH||'startsit_depth');
+    return;
+  }
   const{betterOptions,totalProj}=_luState;
   if(!betterOptions.length)return;
 

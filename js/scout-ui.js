@@ -1253,9 +1253,21 @@ function _scoutTeamStateText(strategy, assessment) {
   return 'Strategy unset';
 }
 
-function _scoutRenderPriorities(priorities) {
-  const rows = (priorities || []).slice(0, 3);
+// Shared "unlock the rest" teaser row for gated brief sections. Free sees the
+// top insight in full, then this row to unlock the remaining depth.
+function _scoutGatedMoreRow(title, sub, feature) {
+  return `<button class="scout-priority-card scout-gated-more" onclick="if(window.showProLaunchPage){showProLaunchPage()}else{showUpgradePrompt('${feature}')}">
+        <span class="scout-priority-index" aria-hidden="true">🔒</span>
+        <span><strong>${_esc(title)}</strong><small>${_esc(sub)}</small></span>
+        <em>Pro</em>
+      </button>`;
+}
+
+function _scoutRenderPriorities(priorities, gated) {
+  const all = priorities || [];
+  const rows = all.slice(0, gated ? 1 : 3);
   if (!rows.length) return '';
+  const more = all.length - rows.length;
   return `<section class="scout-brief-section">
     <div class="scout-section-head">
       <div><span class="scout-kicker">Priorities</span><h2>What needs attention</h2></div>
@@ -1269,13 +1281,16 @@ function _scoutRenderPriorities(priorities) {
         </span>
         <em>${_esc(p.actionLabel || 'Act')}</em>
       </button>`).join('')}
+      ${gated && more > 0 ? _scoutGatedMoreRow(`See all ${all.length} priorities`, 'Full priority stack, ranked by leverage', window.FEATURES?.BRIEFING_REASONING || 'briefing_reasoning') : ''}
     </div>
   </section>`;
 }
 
-function _scoutRenderOpportunities(opportunities) {
-  const rows = (opportunities || []).slice(0, 3);
+function _scoutRenderOpportunities(opportunities, gated) {
+  const all = opportunities || [];
+  const rows = all.slice(0, gated ? 1 : 3);
   if (!rows.length) return '';
+  const more = all.length - rows.length;
   return `<section class="scout-brief-section">
     <div class="scout-section-head">
       <div><span class="scout-kicker">Trade Matches</span><h2>Who fits your needs?</h2></div>
@@ -1288,13 +1303,16 @@ function _scoutRenderOpportunities(opportunities) {
         <small>${Number(o.exploitScore || 0)} fit score</small>
         <em>${_esc(o.suggestedAction || 'Attack')}</em>
       </button>`).join('')}
+      ${gated && more > 0 ? _scoutGatedMoreRow(`See all ${all.length} trade matches`, 'Every partner + fit score', window.FEATURES?.TRADE_SCENARIOS || 'trade_scenarios') : ''}
     </div>
   </section>`;
 }
 
-function _scoutRenderFieldIntel(items) {
-  const rows = (items || []).slice(0, 4);
+function _scoutRenderFieldIntel(items, gated) {
+  const all = items || [];
+  const rows = all.slice(0, gated ? 1 : 4);
   if (!rows.length) return '';
+  const more = all.length - rows.length;
   return `<section class="scout-brief-section">
     <div class="scout-section-head">
       <div><span class="scout-kicker">Alex's Read</span><h2>What Alex is seeing</h2></div>
@@ -1302,6 +1320,7 @@ function _scoutRenderFieldIntel(items) {
     </div>
     <div class="scout-intel-list">
       ${rows.map(row => `<div class="scout-intel-row"><i></i><span>${_esc(row)}</span></div>`).join('')}
+      ${gated && more > 0 ? `<button class="scout-intel-row scout-gated-more" style="width:100%;text-align:left;background:none;border:none;cursor:pointer;font:inherit" onclick="if(window.showProLaunchPage){showProLaunchPage()}else{showUpgradePrompt('${window.FEATURES?.BRIEFING_REASONING || 'briefing_reasoning'}')}"><i aria-hidden="true">🔒</i><span>See all ${all.length} reads — unlock Alex's full field intel</span></button>` : ''}
     </div>
   </section>`;
 }
@@ -1337,10 +1356,15 @@ function renderWarRoomBrief() {
   const _whatChanged = (typeof _scoutWhatChanged === 'function') ? _scoutWhatChanged() : null;
   const _wcSince = _whatChanged && _whatChanged.sinceTs && typeof _relativeTime === 'function' ? _relativeTime(_whatChanged.sinceTs) : '';
   const _wcTone = t => t === 'up' ? 'var(--green)' : t === 'down' ? 'var(--red)' : t === 'warn' ? 'var(--amber)' : 'var(--text3)';
-  const _whatChangedHtml = (_whatChanged && _whatChanged.changes.length) ? `<section class="scout-brief-section">
+  // Depth gate: free keeps the top insight per brief section; paid unlocks the full stack.
+  const _briefGated = typeof canAccess === 'function' && !canAccess(window.FEATURES?.BRIEFING_REASONING || 'briefing_reasoning');
+  const _wcAll = _whatChanged ? _whatChanged.changes : [];
+  const _wcChanges = _briefGated ? _wcAll.slice(0, 1) : _wcAll;
+  const _whatChangedHtml = _wcChanges.length ? `<section class="scout-brief-section">
       <div><span class="scout-kicker">Since you last opened${_wcSince ? ' · ' + _esc(_wcSince) : ''}</span><h2>What changed</h2></div>
       <div style="display:flex;flex-direction:column;gap:9px;margin-top:10px">
-        ${_whatChanged.changes.map(c => `<div style="display:flex;align-items:center;gap:9px;font-size:13px"><span style="color:${_wcTone(c.tone)};width:14px;text-align:center;flex-shrink:0">${c.icon}</span><span style="flex:1;color:var(--text2)">${_esc(c.label)}</span><span class="mono" style="color:var(--text3);white-space:nowrap">${_esc(c.val)}</span></div>`).join('')}
+        ${_wcChanges.map(c => `<div style="display:flex;align-items:center;gap:9px;font-size:13px"><span style="color:${_wcTone(c.tone)};width:14px;text-align:center;flex-shrink:0">${c.icon}</span><span style="flex:1;color:var(--text2)">${_esc(c.label)}</span><span class="mono" style="color:var(--text3);white-space:nowrap">${_esc(c.val)}</span></div>`).join('')}
+        ${_briefGated && _wcAll.length > 1 ? `<button class="scout-gated-more" style="display:flex;align-items:center;gap:9px;font-size:13px;width:100%;text-align:left;background:none;border:none;cursor:pointer;font:inherit;color:var(--accent);padding:2px 0" onclick="if(window.showProLaunchPage){showProLaunchPage()}else{showUpgradePrompt('${window.FEATURES?.BRIEFING_REASONING || 'briefing_reasoning'}')}"><span style="width:14px;text-align:center;flex-shrink:0" aria-hidden="true">🔒</span><span style="flex:1">See all ${_wcAll.length} changes since you left</span><span class="mono" style="white-space:nowrap">Pro</span></button>` : ''}
       </div>
     </section>` : '';
 
@@ -1400,7 +1424,7 @@ function renderWarRoomBrief() {
         <span class="scout-kicker">Intelligence Briefing</span>
         ${_heroLead ? `<p style="color:var(--text2)">${_heroLead}</p>` : ''}
         <p>${_esc(diagnosis.line1 || 'Alex is reading your roster.')}</p>
-        ${diagnosis.line2 ? `<p>${_esc(diagnosis.line2)}</p>` : ''}
+        ${diagnosis.line2 && !_briefGated ? `<p>${_esc(diagnosis.line2)}</p>` : ''}
       </div>
     </section>
 
@@ -1422,16 +1446,16 @@ function renderWarRoomBrief() {
         <span>${_esc(_scoutConfidenceLabel(nextMove?.confidence))}</span>
         <span>${_esc(_scoutUrgencyLabel(nextMove?.urgency))}</span>
       </div>
-      ${_scoutRenderRecommendationContract(nextMoveContract)}
+      ${_briefGated ? '' : _scoutRenderRecommendationContract(nextMoveContract)}
       <div class="scout-brief-actions">
         <button class="scout-primary-btn" onclick="${_scoutNextMoveAction(nextMove)}">${_esc(_scoutNextMoveButtonLabel(nextMove))}</button>
-        <button class="scout-secondary-btn" onclick="${_scoutFillAction(`Explain this recommendation: ${nextMove?.action || 'what should I do next?'}`)}">See Why</button>
+        ${_briefGated ? '' : `<button class="scout-secondary-btn" onclick="${_scoutFillAction(`Explain this recommendation: ${nextMove?.action || 'what should I do next?'}`)}">See Why</button>`}
       </div>
     </section>
 
-    ${_scoutRenderPriorities(priorities)}
-    ${_scoutRenderOpportunities(opportunities)}
-    ${_scoutRenderFieldIntel(fieldIntel)}
+    ${_scoutRenderPriorities(priorities, _briefGated)}
+    ${_scoutRenderOpportunities(opportunities, _briefGated)}
+    ${_scoutRenderFieldIntel(fieldIntel, _briefGated)}
   </div>`;
 }
 window.renderWarRoomBrief = renderWarRoomBrief;
@@ -1588,6 +1612,8 @@ function renderTeamCommandPanel() {
   const fallbackHealth = maxValue > 0 ? Math.max(10, Math.round((totalValue / maxValue) * 100)) : null;
   const rawHealth = Number(assessment?.healthScore || 0);
   const health = rawHealth > 0 ? Math.round(rawHealth) : (fallbackHealth ?? '—');
+  // Light depth gate: free sees the generic tier; paid sees the strategic window timeline.
+  const _teamGated = typeof canAccess === 'function' && !canAccess(window.FEATURES?.BRIEFING_REASONING || 'briefing_reasoning');
 
   const actionRows = [
     {
@@ -1634,7 +1660,7 @@ function renderTeamCommandPanel() {
       <div class="scout-metric-card"><span>Roster DHQ</span><strong>${hasValueData ? Math.round(totalValue).toLocaleString() : 'Syncing'}</strong><small>${hasValueData && rank.rank ? `#${rank.rank}/${rank.total} ${rank.basis}` : 'DHQ cache warming up'}</small></div>
       <div class="scout-metric-card"><span>Draft Bank</span><strong>${Math.round(pickValueTotal).toLocaleString()}</strong><small>${picks.length} picks in next 3 years</small></div>
       <div class="scout-metric-card"><span>FAAB</span><strong>${faab.isFAAB ? '$' + faab.remaining : 'Priority'}</strong><small>${faab.isFAAB ? '$' + faab.budget + ' budget' : '#' + (roster.settings?.waiver_position || '?') + ' waiver claim'}</small></div>
-      <div class="scout-metric-card"><span>Window</span><strong>${_esc(assessment?.window || tier)}</strong><small>${needs.length ? `Need ${needs.slice(0, 2).join(', ')}` : 'No major gaps'}</small></div>
+      <div class="scout-metric-card"><span>Window</span><strong>${_esc((_teamGated ? null : assessment?.window) || tier)}</strong><small>${needs.length ? `Need ${needs.slice(0, 2).join(', ')}` : 'No major gaps'}</small></div>
     </section>
 
     <section class="scout-section-card">
@@ -3645,6 +3671,18 @@ function renderLeagueIntelPanel() {
   const rebuilders = rows.filter(r => r.tier === 'REBUILDING' || r.postureKey === 'SELLER').length;
   const marketRead = _leagueIntelMarketRead(rows, me, best);
 
+  // Depth gate: free gets standings + KPIs + your own dossier + one trade-fit
+  // teaser; paid unlocks owner DNA, full market map, leverage, pressure, and
+  // every opponent dossier.
+  const _liGated = typeof canAccess === 'function' && !canAccess(window.FEATURES?.OWNER_DNA || 'owner_dna');
+  const _liKey = window.FEATURES?.OWNER_DNA || 'owner_dna';
+  const _mmSorted = opponents.slice().sort((a, b) => (b.fit || 0) - (a.fit || 0));
+  const _mmShow = _mmSorted.slice(0, _liGated ? 1 : 4);
+  const _mmRows = _mmShow.map(row => _leagueIntelMarketRow(row)).join('') || _leagueIntelEmpty('No trade fits yet.');
+  const _mmMore = (_liGated && _mmSorted.length > 1)
+    ? `<button class="league-intel-market-row scout-gated-more" style="width:100%;cursor:pointer;background:none;border:none;text-align:left;color:var(--accent);font:inherit;display:flex;align-items:center;gap:8px;padding:10px 0" onclick="if(window.showProLaunchPage){showProLaunchPage()}else{showUpgradePrompt('${_liKey}')}"><span aria-hidden="true">🔒</span><span>See all ${_mmSorted.length} trade partners — Pro</span></button>`
+    : '';
+
   host.innerHTML = `<div class="league-intel-hq">
     <section class="league-intel-hero">
       <div>
@@ -3669,16 +3707,16 @@ function renderLeagueIntelPanel() {
       <div class="league-intel-card">
         <div class="league-intel-card-head"><span>Market Map</span><em>${opponents.length} owners</em></div>
         <div class="league-intel-market-list">
-          ${opponents.slice().sort((a, b) => (b.fit || 0) - (a.fit || 0)).slice(0, 4).map(row => _leagueIntelMarketRow(row)).join('') || _leagueIntelEmpty('No trade fits yet.')}
+          ${_mmRows}${_mmMore}
         </div>
       </div>
       <div class="league-intel-card">
         <div class="league-intel-card-head"><span>Leverage</span><em>${me ? me.shortName : 'You'}</em></div>
-        ${_leagueIntelLeverage(me, pickLeader, faabLeader)}
+        ${_liGated ? _tierGatePlaceholder('League Leverage', _liKey) : _leagueIntelLeverage(me, pickLeader, faabLeader)}
       </div>
       <div class="league-intel-card">
         <div class="league-intel-card-head"><span>Position Pressure</span><em>Needs vs supply</em></div>
-        ${_leagueIntelPressure(rows, me)}
+        ${_liGated ? _tierGatePlaceholder('Position Pressure', _liKey) : _leagueIntelPressure(rows, me)}
       </div>
     </section>
 
@@ -3691,7 +3729,7 @@ function renderLeagueIntelPanel() {
         <button class="scout-secondary-btn" onclick="mobileTab('trades')">Trade Studio</button>
       </div>
       <div class="league-intel-controls">
-        <input id="league-intel-search" type="search" value="${_leagueIntelAttr(_leagueIntelState.query)}" placeholder="Search owner, team, need, DNA..." oninput="leagueIntelSearch(this.value)">
+        <input id="league-intel-search" type="search" value="${_leagueIntelAttr(_leagueIntelState.query)}" placeholder="${_liGated ? 'Search owner, team, need...' : 'Search owner, team, need, DNA...'}" oninput="leagueIntelSearch(this.value)">
         <div class="league-intel-filter-row">
           ${[
             ['all', 'All'],
@@ -3703,7 +3741,7 @@ function renderLeagueIntelPanel() {
         </div>
       </div>
       <div class="league-owner-list" id="league-owner-list">
-        ${rows.map(row => _leagueIntelOwnerCard(row, me)).join('')}
+        ${rows.map(row => _leagueIntelOwnerCard(row, me, _liGated)).join('')}
       </div>
       <div class="league-intel-no-results" id="league-intel-no-results" style="display:none">No owner matches this view.</div>
     </section>
@@ -3886,7 +3924,8 @@ function _leagueIntelPressure(rows, me) {
   </div>`;
 }
 
-function _leagueIntelOwnerCard(row, me) {
+function _leagueIntelOwnerCard(row, me, gated) {
+  const _dnaGated = gated && !row.isMe; // your own DNA stays visible
   const safeRid = _leagueIntelRid(row.rosterId);
   const isOpen = String(_leagueIntelState.dossier) === String(row.rosterId);
   const tierCls = _leagueIntelToneFor(row);
@@ -3895,7 +3934,7 @@ function _leagueIntelOwnerCard(row, me) {
   const data = [
     row.teamName,
     row.ownerName,
-    row.dna,
+    _dnaGated ? '' : row.dna, // don't let free users filter opponents by locked DNA
     row.postureLabel,
     row.tierLabel,
     needs.join(' '),
@@ -3909,7 +3948,7 @@ function _leagueIntelOwnerCard(row, me) {
         <small>${_esc(row.record)} &middot; ${_esc(row.tierLabel)} &middot; ${Math.round(row.value || 0).toLocaleString()} DHQ</small>
         <span class="league-owner-chipline">
           <i>${_esc(row.postureLabel)}</i>
-          ${row.dna ? `<i>${_esc(row.dna)}</i>` : ''}
+          ${row.dna && !_dnaGated ? `<i>${_esc(row.dna)}</i>` : ''}
           ${row.tradeCount ? `<i>${row.tradeCount} trades</i>` : ''}
         </span>
       </span>
@@ -3923,12 +3962,26 @@ function _leagueIntelOwnerCard(row, me) {
       <span><b>Has</b>${strengths.length ? strengths.map(p => `<em class="good">${_esc(p)}</em>`).join('') : '<em>Flat</em>'}</span>
       <span><b>Capital</b><em>${row.picks.length} picks</em><em>${row.faab.isFAAB ? '$' + row.faab.remaining : 'Priority'}</em></span>
     </div>
-    ${isOpen ? _leagueIntelDossier(row, me) : ''}
+    ${isOpen ? _leagueIntelDossier(row, me, gated) : ''}
   </div>`;
 }
 
-function _leagueIntelDossier(row, me) {
+function _leagueIntelDossier(row, me, gated) {
   const safeRid = _leagueIntelRid(row.rosterId);
+  // Free: your own dossier is full; opponents show the Scout Read teaser + a
+  // gated placeholder for the deep DNA dossier (assets/rooms/capital/history).
+  if (gated && !row.isMe) {
+    const fitWhy = _leagueIntelFitWhy(row, me, true);
+    return `<div class="league-owner-dossier">
+      <div class="league-dossier-read">
+        <div><span>Scout Read</span><p>${_esc(fitWhy)}</p></div>
+      </div>
+      ${_tierGatePlaceholder('Full owner dossier — assets, rooms, capital, trade history & DNA', window.FEATURES?.OWNER_DNA || 'owner_dna')}
+      <div class="league-dossier-actions">
+        <button class="scout-primary-btn" onclick="event.stopPropagation();leagueIntelBuildTrade('${safeRid}')">Build Trade</button>
+      </div>
+    </div>`;
+  }
   const myNeeds = new Set(me?.needs || []);
   const targetPlayers = row.players.filter(p => myNeeds.has(p.pos)).slice(0, 4);
   const topPlayers = (targetPlayers.length ? targetPlayers : row.players.slice(0, 4));
@@ -3996,7 +4049,7 @@ function _leagueIntelDossier(row, me) {
   </div>`;
 }
 
-function _leagueIntelFitWhy(row, me) {
+function _leagueIntelFitWhy(row, me, gated) {
   if (row.isMe) {
     return `This is your current team context: ${row.tierLabel}, ${row.record}, ${row.picks.length} future picks, and ${row.faab.isFAAB ? '$' + row.faab.remaining + ' FAAB' : 'waiver priority context'}.`;
   }
@@ -4007,7 +4060,13 @@ function _leagueIntelFitWhy(row, me) {
   const parts = [];
   if (theyHave.length) parts.push(`They can solve your ${theyHave.slice(0, 2).join(', ')} pressure.`);
   if (theyWant.length) parts.push(`Your ${theyWant.slice(0, 2).join(', ')} surplus matches their board.`);
-  parts.push(`${row.postureLabel} posture with ${row.dna || 'unknown DNA'} means ${_leagueIntelPostureAdvice(row)}.`);
+  // Free: keep posture (a free signal) but never expose the OWNER_DNA-gated value
+  // or DNA-derived advice — that's what the dossier placeholder is locking.
+  if (gated) {
+    parts.push(`${row.postureLabel} posture — unlock Owner DNA for how to approach them.`);
+  } else {
+    parts.push(`${row.postureLabel} posture with ${row.dna || 'unknown DNA'} means ${_leagueIntelPostureAdvice(row)}.`);
+  }
   if (row.picks.length) parts.push(`${row.picks.length} picks give them package flexibility.`);
   return parts.join(' ');
 }
