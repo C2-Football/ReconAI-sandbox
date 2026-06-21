@@ -1,8 +1,9 @@
 // js/shell.js — Native app shell: bottom sheets, pull-to-refresh, gestures
 
-const SHELL_PRIMARY_TABS = ['digest', 'team', 'tools', 'portfolio'];
+const SHELL_PRIMARY_TABS = ['digest', 'team', 'tools', 'ai'];
 const SHELL_TAB_GROUPS = {
   digest: 'digest',
+  fieldlog: 'digest',
   team: 'team',
   roster: 'team',
   startsit: 'team',
@@ -10,9 +11,9 @@ const SHELL_TAB_GROUPS = {
   waivers: 'tools',
   trades: 'tools',
   draftroom: 'tools',
-  portfolio: 'portfolio',
-  league: 'portfolio',
-  fieldlog: 'portfolio',
+  league: 'tools',
+  ai: 'ai',
+  portfolio: 'tools',
 };
 
 function _prefersReducedMotion() {

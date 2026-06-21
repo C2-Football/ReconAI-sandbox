@@ -35,6 +35,11 @@ const TAB_CHIPS = {
     { title: 'Cross-league queue', sub: 'highest-leverage decisions' },
     { title: 'Which roster has the best window', sub: 'redraft and dynasty' },
   ],
+  ai: [
+    { title: 'What should I do this week', sub: 'lineup, waivers, trades' },
+    { title: 'Audit my roster', sub: 'rank my next 3 moves' },
+    { title: 'Find a trade', sub: 'based on owner DNA' },
+  ],
   league: [
     { title: 'Weakest teams',      sub: 'exploit their gaps' },
     { title: 'Owner tendencies',   sub: 'behavioral patterns' },
@@ -1718,6 +1723,93 @@ function renderToolsPanel() {
   </div>`;
 }
 window.renderToolsPanel = renderToolsPanel;
+
+// ── AI tab (dedicated Ask-Alex surface) ────────────────────────
+// The 4th bottom-nav tab. Reuses the existing global-chat engine
+// (gm-bar / sendGlobalChat / fillGlobalChat) — this panel is the
+// resting landing: greeting, daily allowance, smart suggestions,
+// and what Alex can do. Tapping a suggestion routes through the
+// same chat pipeline; the conversation itself plays in the GM bar.
+function renderAIPanel() {
+  const host = document.getElementById('panel-ai-content');
+  if (!host) return;
+  const S = window.S || {};
+
+  const tier = (typeof getTier === 'function') ? getTier() : 'free';
+  const isPaidLike = tier === 'paid' || tier === 'trial';
+  const hasKey = !!(S.apiKey) || (typeof hasServerAI === 'function' && hasServerAI());
+  const lim = window.FREE_CHAT_DAILY_LIMIT || 3;
+  const remaining = (typeof getDailyChatRemaining === 'function') ? getDailyChatRemaining() : lim;
+  const unlimited = isPaidLike || hasKey;
+  const allowance = unlimited ? 'Unlimited' : `${remaining}/${lim} today`;
+  const limited = !unlimited && remaining <= 0;
+
+  // Smart suggestions: GM field intel (live, roster-aware) on top of the
+  // canned ai chips so the prompts feel like Scout already read the team.
+  const fi = (window.GMEngine?.generateFieldIntel?.() || []).slice(0, 2);
+  const fiPrompts = fi.map(s => ({ title: s, prompt: s }));
+  const canned = (TAB_CHIPS.ai || []).map(c => ({ title: c.title, sub: c.sub, prompt: `${c.title}: ${c.sub}` }));
+  const suggestions = [...fiPrompts, ...canned].slice(0, 5);
+
+  const caps = [
+    { t: 'Lineups', d: 'Start/sit calls with projections' },
+    { t: 'Trades', d: 'Packages tuned to owner DNA' },
+    { t: 'Waivers', d: 'Add/drop + bid plans' },
+    { t: 'Scouting', d: 'Player reads and league intel' },
+  ];
+
+  const greeting = S.user ? 'Ask Alex anything about your team.' : 'Connect a league and Alex gets to work.';
+
+  host.innerHTML = `<div class="scout-command-shell">
+    <section class="scout-hero">
+      <div class="scout-hero-row" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div class="scout-kicker">AI GM · Alex</div>
+        <span class="scout-ai-allowance" style="font-size:11px;font-weight:700;letter-spacing:.04em;padding:3px 9px;border-radius:999px;border:1px solid var(--border2);color:${unlimited ? 'var(--accent)' : 'var(--text3)'}">${_esc(allowance)}</span>
+      </div>
+      <h1>${_esc(greeting)}</h1>
+      <p>One advisor across lineups, trades, waivers, and the draft — grounded in your real league.</p>
+      <button class="scout-ai-launcher" onclick="${limited ? `showUpgradePrompt('${(window.FEATURES && FEATURES.UNLIMITED_CHAT) || 'unlimited_chat'}')` : "var i=document.getElementById('global-chat-in');if(i){i.focus();}"}"
+        style="margin-top:12px;width:100%;display:flex;align-items:center;gap:10px;padding:13px 16px;border-radius:12px;border:1px solid var(--border2);background:var(--bg2);color:var(--text3);cursor:pointer;text-align:left;font-size:14px">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--accent)" stroke-width="1.6"><path d="M12 3l1.7 4.5L18 9.2l-4.3 1.7L12 15l-1.7-4.1L6 9.2l4.3-1.7z"/></svg>
+        ${limited ? 'Daily limit reached — upgrade for unlimited' : 'Message Alex…'}
+      </button>
+    </section>
+
+    <section class="scout-section-card">
+      <div class="scout-section-head">
+        <div><span class="scout-kicker">Suggested</span><h2>Start here</h2></div>
+      </div>
+      <div class="scout-action-list" id="scout-ai-suggest-list">
+        ${suggestions.map(s => `<button class="scout-action-row scout-ai-suggest" data-ask="${_esc(s.prompt)}">
+          <span><strong>${_esc(s.title)}</strong>${s.sub ? `<small>${_esc(s.sub)}</small>` : ''}</span>
+          <em>Ask →</em>
+        </button>`).join('')}
+      </div>
+    </section>
+
+    <section class="scout-section-card">
+      <div class="scout-section-head">
+        <div><span class="scout-kicker">What Alex can do</span><h2>Your whole season, one chat</h2></div>
+      </div>
+      <div class="scout-ai-caps" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${caps.map(c => `<div style="padding:11px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg2)">
+          <div style="font-weight:700;font-size:13px;color:var(--text)">${_esc(c.t)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${_esc(c.d)}</div>
+        </div>`).join('')}
+      </div>
+      ${!unlimited ? `<div class="scout-mini-read" style="margin-top:12px"><strong>Free:</strong> ${lim} Alex messages/day on the fast model. <a onclick="showUpgradePrompt('${(window.FEATURES && FEATURES.UNLIMITED_CHAT) || 'unlimited_chat'}')" style="color:var(--accent);cursor:pointer">Upgrade</a> for unlimited on the pro model.</div>` : ''}
+    </section>
+  </div>`;
+
+  // Delegated click for suggestions — avoids attribute-quoting pitfalls with
+  // field-intel prompts that contain quotes/apostrophes.
+  const list = document.getElementById('scout-ai-suggest-list');
+  if (list) list.onclick = (e) => {
+    const btn = e.target.closest('.scout-ai-suggest');
+    if (btn && typeof fillGlobalChat === 'function') fillGlobalChat(btn.dataset.ask || '');
+  };
+}
+window.renderAIPanel = renderAIPanel;
 
 function _scoutStorageJson(key, fallback) {
   try {
@@ -4159,13 +4251,13 @@ function _patchMobileTab() {
     window._activeTab = tab;
     renderCtxChips(tab);
 
-    if (tab === 'league' || tab === 'fieldlog') {
+    if (tab === 'league' || tab === 'fieldlog' || tab === 'ai') {
       // Handle new tabs directly
       document.querySelectorAll('.mobile-nav-item').forEach(b => b.classList.remove('active'));
       if (btn) {
         btn.classList.add('active');
       } else {
-        const idMap = { league: 'mnav-portfolio', fieldlog: 'mnav-portfolio' };
+        const idMap = { league: 'mnav-tools', fieldlog: 'mnav-tools', ai: 'mnav-ai' };
         const el = document.getElementById(idMap[tab]);
         if (el) el.classList.add('active');
       }
@@ -4175,6 +4267,7 @@ function _patchMobileTab() {
 
       if (tab === 'league')    window.renderLeaguePanel();
       if (tab === 'fieldlog')  renderFieldLogPanel();
+      if (tab === 'ai' && typeof renderAIPanel === 'function') renderAIPanel();
     } else {
       // Call the original pre-patch mobileTab (which calls switchTab for panel activation)
       original(tab, btn);
@@ -4184,7 +4277,7 @@ function _patchMobileTab() {
       if (btn) {
         btn.classList.add('active');
       } else {
-        const newMap = { digest:'mnav-home', team:'mnav-team', tools:'mnav-tools', portfolio:'mnav-portfolio', draftroom:'mnav-tools', waivers:'mnav-tools', trades:'mnav-tools', roster:'mnav-team', startsit:'mnav-tools', settings:null };
+        const newMap = { digest:'mnav-home', team:'mnav-team', tools:'mnav-tools', ai:'mnav-ai', draftroom:'mnav-tools', waivers:'mnav-tools', trades:'mnav-tools', roster:'mnav-team', startsit:'mnav-team', league:'mnav-tools', fieldlog:'mnav-tools', settings:null };
         const navId = newMap[tab];
         if (navId) { const el = document.getElementById(navId); if (el) el.classList.add('active'); }
       }
@@ -4221,6 +4314,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window._activeTab === 'digest') renderWarRoomBrief();
     if (window._activeTab === 'team') renderTeamCommandPanel();
     if (window._activeTab === 'tools') renderToolsPanel();
+    if (window._activeTab === 'ai') renderAIPanel();
     if (window._activeTab === 'portfolio') renderPortfolioPanel();
     if (typeof renderTrialBanner === 'function') renderTrialBanner();
     if (typeof _updateChatPlaceholder === 'function') _updateChatPlaceholder();
