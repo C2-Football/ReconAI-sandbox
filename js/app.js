@@ -156,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ── Tab switching ──────────────────────────────────────────────
 function switchTab(tab,btn){
   // Guard: redirect to home if not connected (except settings and shell tabs that can explain next steps)
-  const publicTabs = new Set(['digest','settings','league','fieldlog','portfolio','tools','trades','ai','calendar','history']);
+  const publicTabs = new Set(['digest','settings','league','fieldlog','portfolio','tools','trades','ai','calendar','history','analytics']);
   if(!S.user && !publicTabs.has(tab)){
     tab='digest';btn=null;
     showToast('Connect your Sleeper account first');
@@ -199,6 +199,7 @@ function switchTab(tab,btn){
   if(tab==='ai'&&typeof window.renderAIPanel==='function')window.renderAIPanel();
   if(tab==='calendar'&&typeof window.renderCalendarPanel==='function')window.renderCalendarPanel();
   if(tab==='history'&&typeof window.renderHistoryPanel==='function')window.renderHistoryPanel();
+  if(tab==='analytics'&&typeof window.renderAnalyticsPanel==='function')window.renderAnalyticsPanel();
   if(tab==='portfolio'&&typeof window.renderPortfolioPanel==='function')window.renderPortfolioPanel();
   if(tab==='settings'&&typeof updateSettingsStatus==='function')updateSettingsStatus();
   if(tab==='settings'&&typeof updateTrialSettingsSection==='function')updateTrialSettingsSection();

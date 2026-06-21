@@ -61,6 +61,7 @@ import './js/trade-builder.js';
 import './js/scout-ui.js';
 import './js/calendar-scout.js';
 import './js/history-scout.js';
+import './js/analytics-scout.js';
 import './js/pro-launch.js';
 import './js/tutorial.js';
 

@@ -14,6 +14,7 @@ const SHELL_TAB_GROUPS = {
   league: 'tools',
   calendar: 'tools',
   history: 'tools',
+  analytics: 'tools',
   ai: 'ai',
   portfolio: 'tools',
 };
