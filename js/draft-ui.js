@@ -1383,7 +1383,7 @@ function renderRookieBoard(){
         <button class="scout-secondary-btn" onclick="openDynamicMockDraft()">Mock</button>
       </div>
       <div class="rookie-board-tools">
-        <input value="${_rookieEsc(_rookieSearch)}" placeholder="Search rookies, college, team..." oninput="_rookieSetSearch(this.value)" />
+        <input id="rookie-search" value="${_rookieEsc(_rookieSearch)}" placeholder="Search rookies, college, team..." oninput="_rookieSetSearch(this.value)" />
         <button onclick="_rookieSetSearch('')" ${_rookieSearch ? '' : 'disabled'}>Clear</button>
       </div>
       <div class="rookie-tag-filter-row">
@@ -1440,10 +1440,20 @@ function _rookieShowMore(){
   _rookieShowAll=true;
   renderRookieBoard();
 }
+let _rookieSearchTimer=null;
 function _rookieSetSearch(value){
   _rookieSearch=value||'';
   _rookieShowAll=false;
-  renderRookieBoard();
+  // Debounce the full board re-render (which re-scans the ~12k player DB and
+  // rebuilds the panel) so it fires once the user pauses, not on every
+  // keystroke. The DOM input keeps the typed value in the meantime; restore
+  // focus + caret afterward since the render replaces the input element.
+  if(_rookieSearchTimer) clearTimeout(_rookieSearchTimer);
+  _rookieSearchTimer=setTimeout(()=>{
+    renderRookieBoard();
+    const el=document.getElementById('rookie-search');
+    if(el){ el.focus(); const n=el.value.length; try{ el.setSelectionRange(n,n); }catch(e){} }
+  },150);
 }
 function _rookieSetTagFilter(tag){
   _rookieTagFilter=_rookieTagFilter===tag?'':tag;
