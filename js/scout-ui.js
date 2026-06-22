@@ -1905,7 +1905,7 @@ function _scoutPortfolioPlayerCommand(allRows, activeNeeds) {
     </div>
     <div class="scout-player-command-read">${_esc(read)}</div>
     <div class="scout-player-command-controls">
-      <input value="${_scoutAttr(state.query)}" placeholder="Search player, team, owner..." oninput="scoutPortfolioPlayerSearch(this.value)">
+      <input id="portfolio-player-search" value="${_scoutAttr(state.query)}" placeholder="Search player, team, owner..." oninput="scoutPortfolioPlayerSearch(this.value)">
       <div class="scout-player-filter-row">
         ${filterOptions.map(([key, label]) => `<button class="${state.filter === key ? 'active' : ''}" onclick="scoutPortfolioPlayerFilter('${key}')">${label}</button>`).join('')}
       </div>
@@ -1936,9 +1936,18 @@ function scoutPortfolioPlayerPos(pos) {
 }
 window.scoutPortfolioPlayerPos = scoutPortfolioPlayerPos;
 
+let _scoutPortfolioSearchTimer = null;
 function scoutPortfolioPlayerSearch(query) {
   _scoutPortfolioPlayersState.query = query || '';
-  renderPortfolioPanel();
+  // Debounce the full-panel re-render so it fires once the user pauses typing
+  // rather than on every keystroke; restore focus + caret afterward since the
+  // render replaces the input element.
+  if (_scoutPortfolioSearchTimer) clearTimeout(_scoutPortfolioSearchTimer);
+  _scoutPortfolioSearchTimer = setTimeout(() => {
+    renderPortfolioPanel();
+    const el = document.getElementById('portfolio-player-search');
+    if (el) { el.focus(); const n = el.value.length; try { el.setSelectionRange(n, n); } catch(e){} }
+  }, 150);
 }
 window.scoutPortfolioPlayerSearch = scoutPortfolioPlayerSearch;
 
