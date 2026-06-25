@@ -70,6 +70,9 @@ function _anDataStack(rows, compact) {
 function _anSection(title, meta, body) {
   return `<div class="analytics-panel"><div class="analytics-panel-head"><span>${_anEsc(title)}</span>${meta ? `<em>${_anEsc(meta)}</em>` : ''}</div>${body}</div>`;
 }
+function _anReadout(title, detail, body) {
+  return `<details class="analytics-readout" open><summary><span>${_anEsc(title)}</span>${detail ? `<em>${_anEsc(detail)}</em>` : ''}</summary><div class="analytics-readout-body">${body}</div></details>`;
+}
 
 // ── Sub-tab renderers ───────────────────────────────────────────────
 function _anModeFromGm() {
@@ -169,12 +172,29 @@ function _anDraftTab(d, ctx) {
     { label: 'Capital vs League', value: _anSigned(capEdge, ' DHQ'), tone: capEdge >= 0 ? 'good' : 'bad', detail: `league avg ${Math.round(avgPickVal).toLocaleString()}` },
     { label: 'Capital Rank', value: '#' + ctx.pickRank, tone: ctx.pickRank <= Math.ceil(ctx.all.length / 3) ? 'good' : ctx.pickRank <= Math.ceil(ctx.all.length * 2 / 3) ? 'warn' : 'bad', detail: `of ${ctx.all.length} teams` },
   ]);
+  // Round Conversion — starter hit-rate by round, champions vs league
+  const dp = (d && d.draft) || {};
+  const hr = dp.winnerHitRate || {};
+  const hrRounds = Object.keys(hr).map(Number).sort((a, b) => a - b);
+  const roundConv = hrRounds.length ? _anSection('Round Conversion', 'Starter hit-rate by round — champions vs league',
+    _anDataStack(hrRounds.map(rd => ({ label: 'Round ' + rd, kicker: 'Hit rate', detail: 'champions vs league', value: _anPct(hr[rd].winners) + ' / ' + _anPct(hr[rd].league), color: (hr[rd].winners || 0) >= (hr[rd].league || 0) ? 'var(--green)' : 'var(--red)' })))) : '';
+
+  // Winner Formula — what champions draft, round by round
+  const wdp = dp.winnerDraftProfile || {}, bpr = dp.bestPositionByRound || {};
+  const fr = Object.keys(wdp).map(Number).sort((a, b) => a - b);
+  const formula = fr.length ? _anSection('Winner Formula', 'What champions draft, round by round',
+    _anDataStack(fr.map(rd => {
+      const top = Object.entries(wdp[rd] || {}).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([p, v]) => p + ' ' + Math.round(v * 100) + '%').join(' · ');
+      return { label: 'Round ' + rd, kicker: 'Champions draft', detail: 'best room: ' + (bpr[rd] || '—'), value: top || '—' };
+    }))) : '';
+
+  // Pick Capital — your future inventory (always available)
   const picks = ctx.myPicks || [];
   const byYear = {};
   picks.forEach(pk => { const y = pk.season || pk.year || '?'; (byYear[y] = byYear[y] || []).push(pk); });
   const rows = Object.keys(byYear).sort().map(y => ({ label: y + ' picks', kicker: 'Draft year', detail: byYear[y].map(p => 'R' + p.round).join(', '), value: String(byYear[y].length) }));
   const capital = rows.length ? _anSection('Pick Capital', 'Your future draft inventory', _anDataStack(rows)) : '';
-  return cmd + proof + capital;
+  return cmd + proof + roundConv + formula + capital;
 }
 
 function _anTradesTab(d, ctx) {
@@ -209,7 +229,36 @@ function _anTradesTab(d, ctx) {
     const rows = fk.map(p => ({ label: p, yours: myNet[p] || 0, benchmark: wNet[p] || 0, format: v => (v > 0 ? '+' : '') + Math.round(v), color: (myNet[p] || 0) >= 0 ? 'var(--green)' : 'var(--red)' }));
     flow = _anSection('Trade Flow', 'Net buy/sell by room — you vs champ', _anDeltaRows({ rows, youLabel: 'You', benchmarkLabel: 'Champ' }));
   }
-  return cmd + proof + flow;
+
+  // Waiver Economy — average FAAB paid by room
+  const lfp = (d && d.waivers && d.waivers.leagueFaabProfile) || {};
+  const order = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF', 'DL', 'LB', 'DB'];
+  const wpos = Object.keys(lfp).filter(p => p && p !== 'UNK').sort((a, b) => (order.indexOf(a) < 0 ? 99 : order.indexOf(a)) - (order.indexOf(b) < 0 ? 99 : order.indexOf(b)));
+  const waiverEcon = wpos.length ? _anSection('Waiver Economy', 'Average FAAB paid by room',
+    _anDataStack(wpos.map(p => ({ label: p, kicker: 'Avg FAAB', detail: (lfp[p].count || 0) + ' claim' + ((lfp[p].count || 0) === 1 ? '' : 's'), value: '$' + Math.round(lfp[p].avg || 0) })))) : '';
+
+  // Market Clock — when winners trade (early buys vs late sells)
+  const wtm = (d && d.trades && d.trades.winnerTiming) || {}, ltm = (d && d.trades && d.trades.leagueTiming) || {};
+  const clock = (wtm.earlyBuys != null || ltm.earlyBuys != null) ? _anSection('Market Clock', 'When winners trade', _anDataStack([
+    { label: 'Champions', kicker: 'Trade timing', detail: 'early buys vs late sells', value: _anPct(wtm.earlyBuys || 0) + ' early · ' + _anPct(wtm.lateSells || 0) + ' late', color: 'var(--accent)' },
+    { label: 'League', kicker: 'Trade timing', detail: 'early buys vs late sells', value: _anPct(ltm.earlyBuys || 0) + ' early · ' + _anPct(ltm.lateSells || 0) + ' late' },
+  ])) : '';
+
+  // Recent Trade Performance — best/worst + last deals
+  const last5 = (d && d.trades && d.trades.myLast5) || [];
+  const bw = d && d.trades && d.trades.myBiggestWin, bl = d && d.trades && d.trades.myBiggestLoss;
+  let recent = '';
+  if (last5.length || bw || bl) {
+    const dealNet = t => (t.netDhq != null ? t.netDhq : (t.net != null ? t.net : (t.delta || 0)));
+    const row = (lbl, lblColor, detail, net) => `<div class="an-row"><span style="${lblColor ? `color:${lblColor}` : ''}">${_anEsc(lbl)}</span><em>${_anEsc(detail || '')}</em><span class="mono" style="color:${net >= 0 ? 'var(--green)' : 'var(--red)'};min-width:88px;text-align:right">${_anSigned(net, ' DHQ')}</span></div>`;
+    let inner = '';
+    if (bw) inner += row('Biggest win', 'var(--green)', bw.label || bw.other || (bw.season || ''), dealNet(bw));
+    if (bl) inner += row('Biggest loss', 'var(--red)', bl.label || bl.other || (bl.season || ''), dealNet(bl));
+    if (last5.length) inner += '<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:8px">' + last5.slice(0, 5).map(t => row((t.season || '') + (t.week ? ' W' + t.week : ''), '', t.result || t.fairness || '', dealNet(t))).join('') + '</div>';
+    recent = _anReadout('Your Recent Trade Performance', 'Best & worst · last ' + Math.min(5, last5.length) + ' deals', '<div class="an-list">' + inner + '</div>');
+  }
+
+  return cmd + proof + waiverEcon + clock + flow + recent;
 }
 
 const _AN_SUBTABS = [

@@ -2759,6 +2759,12 @@ input,textarea,select,[contenteditable="true"]{
 .analytics-data-row strong{color:var(--text);font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .analytics-data-row em{color:var(--text3);font-style:normal;font-size:.66rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .analytics-data-row b{color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:.75rem;white-space:nowrap}
+.analytics-readout{border:1px solid rgba(212,175,55,0.18);background:linear-gradient(135deg,rgba(212,175,55,0.06),rgba(124,107,248,0.02));border-radius:10px;margin-bottom:14px;overflow:hidden}
+.analytics-readout summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:12px 14px;border-bottom:1px solid rgba(212,175,55,0.1)}
+.analytics-readout summary::-webkit-details-marker{display:none}
+.analytics-readout summary span{color:var(--accent);font-size:.96rem;font-weight:700;letter-spacing:.02em}
+.analytics-readout summary em{color:var(--text3);font-size:.68rem;font-style:normal;text-align:right}
+.analytics-readout-body{font-size:.82rem;line-height:1.55;padding:12px 14px}
 @media(max-width:1100px){
   .analytics-proof-grid{grid-template-columns:1fr 1fr}
   .analytics-command-panel{grid-template-columns:1fr}
