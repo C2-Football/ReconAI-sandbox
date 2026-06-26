@@ -2793,6 +2793,28 @@ input,textarea,select,[contenteditable="true"]{
 .an-wf-bars i{flex:1;height:12px;border-radius:2px;min-width:0;display:block}
 .an-wf-cliff{min-width:44px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:700;color:var(--text3)}
 .an-wf-action{padding:11px 13px;font-size:.82rem;line-height:1.55;color:var(--text2)}
+/* Custom report builder */
+.analytics-report-card.is-new{border-style:dashed;background:none}
+.an-rpt-cardbtns{display:flex !important;gap:7px;margin-top:8px}
+.an-rpt-cardbtns i{font-style:normal;font-size:11px;color:var(--text3);cursor:pointer;text-transform:uppercase;letter-spacing:.05em;border:1px solid var(--border2);border-radius:5px;padding:2px 8px}
+.an-rpt-cardbtns i:hover{color:var(--accent);border-color:var(--accent)}
+.an-rpt-form{display:flex;flex-direction:column;gap:6px}
+.an-rpt-label{font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-top:5px}
+.an-rpt-input{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:8px 10px;font-size:14px;color:var(--text);font-family:inherit;width:100%}
+.an-rpt-input-sm{flex:0 0 84px;width:84px}
+.an-rpt-cols{display:flex;flex-wrap:wrap;gap:6px}
+.an-rpt-col{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--text2);background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:5px 9px;cursor:pointer}
+.an-rpt-col input{accent-color:var(--accent);margin:0}
+.an-rpt-filter{display:flex;gap:6px;align-items:center}
+.an-rpt-sel{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:8px 9px;font-size:13px;color:var(--text);font-family:inherit;flex:1;min-width:0}
+.an-rpt-sel-sm{flex:0 0 96px}
+.an-rpt-actions{display:flex;gap:8px;margin-top:11px;align-items:center}
+.an-rpt-actions .an-seg{flex:0 0 auto}
+.an-rpt-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -2px}
+.an-rpt-table{width:100%;border-collapse:collapse;font-size:13px}
+.an-rpt-table th{text-align:left;padding:7px 9px;font-size:.58rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);border-bottom:1px solid var(--border2);white-space:nowrap}
+.an-rpt-table td{padding:7px 9px;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap}
+.an-rpt-table td.num{font-family:'JetBrains Mono',monospace;color:var(--text);text-align:right}
 @media(max-width:1100px){
   .analytics-report-grid{grid-template-columns:1fr 1fr}
   .analytics-proof-grid{grid-template-columns:1fr 1fr}

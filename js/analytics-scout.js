@@ -419,11 +419,220 @@ function _anRunPresetReport(id, d, ctx) {
   }
   return '';
 }
+// ── Custom report builder (port of warroom/js/tabs/league-map.js runReport) ──
+function _anReportPlayerCols() {
+  return [
+    { key: 'name', label: 'Name' }, { key: 'pos', label: 'Pos' }, { key: 'age', label: 'Age' },
+    { key: 'team', label: 'NFL' }, { key: 'dhq', label: 'DHQ' }, { key: 'ppg', label: 'PPG' },
+    { key: 'peakYrs', label: 'Peak Yrs' }, { key: 'owner', label: 'Owner' },
+    { key: 'tier', label: 'Owner Tier' }, { key: 'contend', label: 'Playoff' },
+  ];
+}
+function _anReportTeamCols() {
+  return [
+    { key: 'teamName', label: 'Team' }, { key: 'record', label: 'Record' }, { key: 'healthScore', label: 'Health' },
+    { key: 'tier', label: 'Tier' }, { key: 'totalDHQ', label: 'Total DHQ' }, { key: 'avgAge', label: 'Avg Age' },
+    { key: 'eliteCount', label: 'Elite' },
+  ];
+}
+function _anReportFields(ds) {
+  return ds === 'players'
+    ? ['pos', 'age', 'dhq', 'ppg', 'peakYrs', 'team', 'owner', 'tier', 'contend']
+    : ['healthScore', 'tier', 'totalDHQ', 'avgAge', 'eliteCount'];
+}
+function _anReportOptionSet(field) {
+  switch (field) {
+    case 'pos': return ['QB', 'RB', 'WR', 'TE', 'K', 'DEF', 'DL', 'LB', 'DB'];
+    case 'tier': return ['ELITE', 'CONTENDER', 'CROSSROADS', 'REBUILDING'];
+    case 'contend': return ['In', 'Bubble', 'Out'];
+    case 'owner': return (_anS().rosters || []).map(r => _anOwnerName(r.roster_id)).filter(Boolean).sort();
+    default: return null;
+  }
+}
+function _anRunReport(config) {
+  const S = _anS(), league = _anLeague();
+  const rosters = S.rosters || [], players = S.players || {};
+  const normPos = window.App?.normPos || (p => p);
+  const assessFor = rid => (typeof window.assessTeamFromGlobal === 'function') ? window.assessTeamFromGlobal(rid) : null;
+  // Playoff contention — rank by record then points-for vs slots.
+  const playoffSlots = Number((league?.settings || {}).playoff_teams) || Math.max(2, Math.round((rosters.length || 12) / 2));
+  const standRows = rosters.map(r => ({ rid: String(r.roster_id), wins: r.settings?.wins || 0, pf: r.settings?.fpts || 0 })).sort((a, b) => (b.wins - a.wins) || (b.pf - a.pf));
+  const contendBy = {};
+  const bubbleEdge = playoffSlots + Math.max(1, Math.round((rosters.length || 12) * 0.17));
+  standRows.forEach((s, i) => { contendBy[s.rid] = (i + 1) <= playoffSlots ? 'In' : (i + 1) <= bubbleEdge ? 'Bubble' : 'Out'; });
+
+  let rows = [];
+  if (config.dataSource === 'players') {
+    rosters.forEach(r => {
+      const owner = _anOwnerName(r.roster_id), assess = assessFor(r.roster_id);
+      (r.players || []).forEach(pid => {
+        const p = players[pid]; if (!p) return;
+        const pos = normPos(p.position) || p.position || '?';
+        const ps = S.playerStats?.[pid] || {};
+        const ppg = (ps.seasonAvg ?? ps.prevAvg);
+        const pw = window.App?.peakWindows?.[pos];
+        const peakYrs = (pw && p.age) ? Math.max(0, pw[1] - p.age) : null;
+        rows.push({
+          name: p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim() || ('Player ' + pid),
+          pos, age: p.age || null, team: p.team || 'FA', dhq: _anVal(pid) || 0,
+          ppg: (ppg != null ? +ppg : null), peakYrs, owner, tier: assess?.tier || 'N/A',
+          contend: contendBy[String(r.roster_id)] || 'N/A', pid,
+        });
+      });
+    });
+  } else {
+    rosters.forEach(r => {
+      const assess = assessFor(r.roster_id), ids = r.players || [];
+      const totalDHQ = ids.reduce((s, pid) => s + (_anVal(pid) || 0), 0);
+      const ages = ids.map(pid => players[pid]?.age).filter(a => a && a > 18 && a < 45);
+      const avgAge = ages.length ? +((ages.reduce((s, a) => s + a, 0) / ages.length).toFixed(1)) : null;
+      const eliteCount = (window.App?.countElitePlayers || window.countElitePlayers || (() => 0))(ids);
+      rows.push({ teamName: _anOwnerName(r.roster_id), record: (r.settings?.wins ?? 0) + '-' + (r.settings?.losses ?? 0), healthScore: assess?.healthScore || 0, tier: assess?.tier || 'N/A', totalDHQ, avgAge, eliteCount, rosterId: r.roster_id });
+    });
+  }
+  // Filters
+  (config.filters || []).forEach(f => {
+    if (!f.field || !f.op || (f.value === '' && f.value !== 0)) return;
+    rows = rows.filter(row => {
+      const val = row[f.field];
+      const cmp = isNaN(Number(f.value)) ? f.value : Number(f.value);
+      const numVal = typeof val === 'number' ? val : (isNaN(Number(val)) ? val : Number(val));
+      switch (f.op) {
+        case 'eq': return String(val).toLowerCase() === String(cmp).toLowerCase();
+        case 'neq': return String(val).toLowerCase() !== String(cmp).toLowerCase();
+        case 'gt': return numVal > cmp; case 'lt': return numVal < cmp;
+        case 'gte': return numVal >= cmp; case 'lte': return numVal <= cmp;
+        case 'in': { const vals = String(f.value).split(',').map(v => v.trim().toUpperCase()); return vals.includes(String(val).toUpperCase()); }
+        default: return true;
+      }
+    });
+  });
+  // Sort
+  if (config.sort && config.sort.field) {
+    const sf = config.sort.field, dir = config.sort.dir === 'asc' ? 1 : -1;
+    rows.sort((a, b) => {
+      const av = a[sf], bv = b[sf];
+      if (av == null && bv == null) return 0; if (av == null) return 1; if (bv == null) return -1;
+      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
+      return String(av).localeCompare(String(bv)) * dir;
+    });
+  }
+  if (config.limit) rows = rows.slice(0, config.limit);
+  const colsAvail = config.dataSource === 'players' ? _anReportPlayerCols() : _anReportTeamCols();
+  const columns = colsAvail.filter(c => (config.columns || []).includes(c.key));
+  return { rows, columns };
+}
+function _anRenderReportResult(config, name) {
+  let res;
+  try { res = _anRunReport(config); } catch (e) { return _anSection(name || 'Report', '', '<p class="an-sub" style="padding:6px 2px">Could not run this report. Refresh league data and try again.</p>'); }
+  const { rows, columns } = res;
+  if (!columns.length) return _anSection(name || 'Report', '', '<p class="an-sub" style="padding:6px 2px">Pick at least one column to show.</p>');
+  if (!rows.length) return _anSection(name || 'Report', 'no rows match', '<p class="an-sub" style="padding:6px 2px">No results. Loosen the filter, or check that league intelligence has finished computing.</p>');
+  const fmt = (key, v) => {
+    if (v == null || v === 'N/A') return '—';
+    if (key === 'dhq' || key === 'totalDHQ') return Math.round(v).toLocaleString();
+    if (typeof v === 'number') return Number.isInteger(v) ? String(v) : v.toFixed(1);
+    return v;
+  };
+  const numCols = { dhq: 1, totalDHQ: 1, healthScore: 1, age: 1, ppg: 1, peakYrs: 1, avgAge: 1, eliteCount: 1 };
+  const head = `<tr>${columns.map(c => `<th>${_anEsc(c.label)}</th>`).join('')}</tr>`;
+  const body = rows.slice(0, 60).map(r => `<tr>${columns.map(c => `<td${numCols[c.key] ? ' class="num"' : ''}>${_anEsc(fmt(c.key, r[c.key]))}</td>`).join('')}</tr>`).join('');
+  const meta = rows.length + ' row' + (rows.length === 1 ? '' : 's') + (rows.length > 60 ? ' · top 60' : '');
+  return _anSection(name || 'Report', meta, `<div class="an-rpt-scroll"><table class="an-rpt-table">${head}${body}</table></div>`);
+}
+
+// Builder state + handlers (localStorage-backed; Supabase sync deferred)
+let _customReports = [];
+try { _customReports = JSON.parse(localStorage.getItem('scout_custom_reports') || '[]') || []; } catch { _customReports = []; }
+let _anActiveCustomId = null;
+let _anBuilderDraft = null;
+function _anSaveCustomReports() { try { localStorage.setItem('scout_custom_reports', JSON.stringify(_customReports.slice(0, 12))); } catch { /* ignore */ } }
+function _anNewReport() { _anBuilderDraft = { id: 'r' + Date.now(), name: '', dataSource: 'players', columns: ['name', 'pos', 'age', 'dhq', 'owner'], filters: [{ field: '', op: 'gte', value: '' }], sort: { field: 'dhq', dir: 'desc' }, limit: 25 }; _anActivePreset = null; _anActiveCustomId = null; renderAnalyticsPanel(); }
+function _anEditReport(id) { const r = _customReports.find(x => x.id === id); if (r) { _anBuilderDraft = JSON.parse(JSON.stringify(r)); _anActiveCustomId = null; _anActivePreset = null; renderAnalyticsPanel(); } }
+function _anDeleteReport(id) { _customReports = _customReports.filter(x => x.id !== id); _anSaveCustomReports(); if (_anActiveCustomId === id) _anActiveCustomId = null; renderAnalyticsPanel(); }
+function _anOpenCustom(id) { _anActiveCustomId = id; _anBuilderDraft = null; _anActivePreset = null; renderAnalyticsPanel(); }
+function _anBuilderSetSource(ds) { if (!_anBuilderDraft) return; _anBuilderDraft.dataSource = ds; _anBuilderDraft.columns = ds === 'players' ? ['name', 'pos', 'age', 'dhq', 'owner'] : ['teamName', 'record', 'healthScore', 'totalDHQ']; _anBuilderDraft.filters = [{ field: '', op: 'gte', value: '' }]; _anBuilderDraft.sort = { field: ds === 'players' ? 'dhq' : 'healthScore', dir: 'desc' }; renderAnalyticsPanel(); }
+function _anBuilderReadForm() {
+  if (!_anBuilderDraft) return;
+  const g = id => document.getElementById(id), d = _anBuilderDraft;
+  if (g('an-rpt-name')) d.name = g('an-rpt-name').value;
+  const checked = [...document.querySelectorAll('.an-rpt-colchk:checked')].map(c => c.value);
+  if (checked.length || document.querySelector('.an-rpt-colchk')) d.columns = checked;
+  const ff = g('an-rpt-ffield')?.value || '';
+  d.filters = ff ? [{ field: ff, op: g('an-rpt-fop')?.value || 'gte', value: g('an-rpt-fval')?.value || '' }] : [];
+  if (g('an-rpt-sfield')) d.sort = { field: g('an-rpt-sfield').value, dir: g('an-rpt-sdir')?.value || 'desc' };
+  const lim = parseInt(g('an-rpt-limit')?.value, 10); d.limit = (Number.isFinite(lim) && lim > 0) ? lim : null;
+}
+function _anBuilderSync() { _anBuilderReadForm(); renderAnalyticsPanel(); }
+function _anCancelBuilder() { _anBuilderDraft = null; renderAnalyticsPanel(); }
+function _anSaveReport() {
+  if (!_anBuilderDraft) return;
+  _anBuilderReadForm();
+  const d = _anBuilderDraft;
+  d.name = (d.name || '').trim() || 'Untitled Report';
+  const idx = _customReports.findIndex(x => x.id === d.id);
+  if (idx >= 0) _customReports[idx] = d; else _customReports.unshift(d);
+  _anSaveCustomReports();
+  _anActiveCustomId = d.id; _anBuilderDraft = null;
+  renderAnalyticsPanel();
+}
+window._anNewReport = _anNewReport;
+window._anEditReport = _anEditReport;
+window._anDeleteReport = _anDeleteReport;
+window._anOpenCustom = _anOpenCustom;
+window._anBuilderSetSource = _anBuilderSetSource;
+window._anBuilderSync = _anBuilderSync;
+window._anCancelBuilder = _anCancelBuilder;
+window._anSaveReport = _anSaveReport;
+
+function _anBuilderForm(d) {
+  const cols = d.dataSource === 'players' ? _anReportPlayerCols() : _anReportTeamCols();
+  const fields = _anReportFields(d.dataSource);
+  const ops = [['eq', '='], ['neq', '≠'], ['gt', '>'], ['lt', '<'], ['gte', '≥'], ['lte', '≤'], ['in', 'in (comma)']];
+  const f0 = (d.filters && d.filters[0]) || { field: '', op: 'gte', value: '' };
+  const colChecks = cols.map(c => `<label class="an-rpt-col"><input type="checkbox" class="an-rpt-colchk" value="${c.key}"${(d.columns || []).includes(c.key) ? ' checked' : ''}>${_anEsc(c.label)}</label>`).join('');
+  const fieldOpts = `<option value="">— no filter —</option>` + fields.map(f => `<option value="${f}"${f0.field === f ? ' selected' : ''}>${f}</option>`).join('');
+  const opOpts = ops.map(([k, l]) => `<option value="${k}"${f0.op === k ? ' selected' : ''}>${l}</option>`).join('');
+  const sortOpts = cols.map(c => `<option value="${c.key}"${d.sort?.field === c.key ? ' selected' : ''}>${_anEsc(c.label)}</option>`).join('');
+  const optSet = _anReportOptionSet(f0.field);
+  const datalist = optSet ? `<datalist id="an-rpt-vals">${optSet.map(v => `<option value="${_anEsc(v)}"></option>`).join('')}</datalist>` : '';
+  const srcSeg = `<div class="an-segctl"><button class="an-seg${d.dataSource === 'players' ? ' active' : ''}" onclick="_anBuilderSetSource('players')">Players</button><button class="an-seg${d.dataSource === 'teams' ? ' active' : ''}" onclick="_anBuilderSetSource('teams')">Teams</button></div>`;
+  const body = `<div class="an-rpt-form">
+    <label class="an-rpt-label">Report name</label>
+    <input id="an-rpt-name" type="text" class="an-rpt-input" placeholder="My report" value="${_anEsc(d.name || '')}">
+    <label class="an-rpt-label">Data set</label>${srcSeg}
+    <label class="an-rpt-label">Columns</label><div class="an-rpt-cols">${colChecks}</div>
+    <label class="an-rpt-label">Filter <span style="color:var(--text3);font-weight:600;text-transform:none;letter-spacing:0">(optional)</span></label>
+    <div class="an-rpt-filter">
+      <select id="an-rpt-ffield" class="an-rpt-sel" onchange="_anBuilderSync()">${fieldOpts}</select>
+      <select id="an-rpt-fop" class="an-rpt-sel an-rpt-sel-sm">${opOpts}</select>
+      <input id="an-rpt-fval" type="text" class="an-rpt-input"${optSet ? ' list="an-rpt-vals"' : ''} placeholder="value" value="${_anEsc(f0.value || '')}">${datalist}
+    </div>
+    <label class="an-rpt-label">Sort &amp; limit</label>
+    <div class="an-rpt-filter">
+      <select id="an-rpt-sfield" class="an-rpt-sel">${sortOpts}</select>
+      <select id="an-rpt-sdir" class="an-rpt-sel an-rpt-sel-sm"><option value="desc"${d.sort?.dir !== 'asc' ? ' selected' : ''}>high→low</option><option value="asc"${d.sort?.dir === 'asc' ? ' selected' : ''}>low→high</option></select>
+      <input id="an-rpt-limit" type="text" inputmode="numeric" class="an-rpt-input an-rpt-input-sm" placeholder="limit" value="${d.limit || ''}">
+    </div>
+    <div class="an-rpt-actions"><button class="scout-primary-btn" onclick="_anSaveReport()">Save &amp; Run</button><button class="an-seg" onclick="_anCancelBuilder()">Cancel</button></div>
+  </div>`;
+  const editing = _customReports.some(r => r.id === d.id);
+  return _anSection(editing ? 'Edit Report' : 'New Report', 'pick data, columns, one filter, a sort', body);
+}
+
 function _anReportsTab(d, ctx) {
-  const cards = _AN_PRESETS.map(p => `<button class="analytics-report-card${_anActivePreset === p.id ? ' is-active' : ''}" onclick="_anRunPreset('${p.id}')"><span>Report</span><strong>${_anEsc(p.name)}</strong><em>${_anEsc(p.desc)}</em></button>`).join('');
+  const presets = _AN_PRESETS.map(p => `<button class="analytics-report-card${_anActivePreset === p.id ? ' is-active' : ''}" onclick="_anRunPreset('${p.id}')"><span>Quick Read</span><strong>${_anEsc(p.name)}</strong><em>${_anEsc(p.desc)}</em></button>`).join('');
+  const customCards = _customReports.map(r => `<div class="analytics-report-card${_anActiveCustomId === r.id ? ' is-active' : ''}" role="button" tabindex="0" onclick="_anOpenCustom('${r.id}')"><span>Custom · ${_anEsc(r.dataSource)}</span><strong>${_anEsc(r.name)}</strong><em>${(r.columns || []).length} cols${(r.filters || []).length ? ' · filtered' : ''}</em><span class="an-rpt-cardbtns"><i onclick="event.stopPropagation();_anEditReport('${r.id}')">Edit</i><i onclick="event.stopPropagation();_anDeleteReport('${r.id}')">Delete</i></span></div>`).join('');
+  const newCard = `<button class="analytics-report-card is-new" onclick="_anNewReport()"><span>Builder</span><strong>+ New Report</strong><em>Query players or teams with your own columns &amp; filter.</em></button>`;
+
   let result = '';
-  if (_anActivePreset) { try { result = _anRunPresetReport(_anActivePreset, d, ctx) || ''; } catch (e) { result = ''; } }
-  return `<div class="analytics-report-grid">${cards}</div>` + result;
+  if (_anBuilderDraft) result = _anBuilderForm(_anBuilderDraft);
+  else if (_anActiveCustomId) { const r = _customReports.find(x => x.id === _anActiveCustomId); if (r) result = _anRenderReportResult(r, r.name); }
+  else if (_anActivePreset) { try { result = _anRunPresetReport(_anActivePreset, d, ctx) || ''; } catch (e) { result = ''; } }
+
+  return `<div class="analytics-report-grid">${presets}</div>`
+    + _anSection('Custom Reports', 'build, save & re-run your own queries', `<div class="analytics-report-grid">${customCards}${newCard}</div>`)
+    + result;
 }
 
 // ── Window Forecast sub-tab ─────────────────────────────────────────
