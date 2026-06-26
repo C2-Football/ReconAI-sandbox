@@ -1199,10 +1199,19 @@ function buildAiRookieOrder(rookies){
   };
   return rookies.slice().sort((a, b) => { const d = score(b) - score(a); return Math.abs(d) > 0.001 ? d : (b.dhq || 0) - (a.dhq || 0); }).map(r => r.pid);
 }
-function _rookieSetLane(lane){ _rookieLane = lane; _rookieShowAll = false; renderRookieBoard(); }
+// AI Board + My Board are premium ("AI+custom boards"); gate on ANALYTICS_DEPTH
+// (the War Room-depth bucket). Market lane stays free. getTier()='paid' on
+// localhost, so this only bites real free users — guard at the action layer.
+function _rookieLanesLocked(){ return typeof canAccess === 'function' && !canAccess(window.FEATURES?.ANALYTICS_DEPTH || 'analytics_depth'); }
+function _rookiePromptUpgrade(){ if (typeof showUpgradePrompt === 'function') showUpgradePrompt(window.FEATURES?.ANALYTICS_DEPTH || 'analytics_depth'); }
+function _rookieSetLane(lane){
+  if ((lane === 'ai' || lane === 'my') && _rookieLanesLocked()) { _rookiePromptUpgrade(); return; }
+  _rookieLane = lane; _rookieShowAll = false; renderRookieBoard();
+}
 window._rookieSetLane = _rookieSetLane;
 function _rookieSeedFromAi(){
-  const pool = Object.values(window._rookieCache || {});
+  if (_rookieLanesLocked()) { _rookiePromptUpgrade(); return; }
+  const pool = window._rookieFullPool || Object.values(window._rookieCache || {}); // full pool, not the filtered view
   if (!pool.length) return;
   _bigBoardSave({ myOrder: buildAiRookieOrder(pool) });
   if (typeof showToast === 'function') showToast('Seeded My Board from AI');
@@ -1210,9 +1219,10 @@ function _rookieSeedFromAi(){
 }
 window._rookieSeedFromAi = _rookieSeedFromAi;
 function _rookieMove(pid, delta){
+  if (_rookieLanesLocked()) { _rookiePromptUpgrade(); return; }
   const b = _bigBoardData();
   let order = (b.myOrder || []).slice();
-  if (!order.length) order = Object.values(window._rookieCache || {}).map(r => r.pid); // lazy-init to current order
+  if (!order.length) order = (window._rookieFullPool || Object.values(window._rookieCache || {})).map(r => r.pid); // lazy-init to FULL pool, not filtered view
   let idx = order.indexOf(pid);
   if (idx < 0) { order.push(pid); idx = order.length - 1; }
   const next = Math.max(0, Math.min(order.length - 1, idx + Number(delta)));
@@ -1222,6 +1232,7 @@ function _rookieMove(pid, delta){
 }
 window._rookieMove = _rookieMove;
 function _rookieSetTier(pid){
+  if (_rookieLanesLocked()) { _rookiePromptUpgrade(); return; }
   const b = _bigBoardData();
   const cur = b.tiers[pid] || '';
   const raw = prompt('Tier for this prospect (1-12, blank to clear):', cur ? String(cur) : '');
@@ -1238,6 +1249,9 @@ window._rookieSetTier = _rookieSetTier;
 function renderRookieBoard(){
   const $ = window.$ || (id => document.getElementById(id));
   const S = window.S || window.App?.S || {};
+  // Lane selection is per-session, but data is per-league — reset to Market on a
+  // league switch so a stale 'My Board' header doesn't sit over an empty order.
+  if (window._rbLastLeague !== S.currentLeagueId) { _rookieLane = 'market'; window._rbLastLeague = S.currentLeagueId; }
   const LI = window.LI || window.App?.LI || {};
   const dynastyValue = window.dynastyValue || window.App?.dynastyValue || (() => 0);
   const assessTeamFromGlobal = window.assessTeamFromGlobal || window.App?.assessTeamFromGlobal;
@@ -1349,6 +1363,11 @@ function renderRookieBoard(){
   }, {});
   _syncRookieHqTagCounts(allBoardTagCounts);
 
+  // Capture the FULL unfiltered pool for big-board seed / My-Board lazy-init, so a
+  // custom board built while a pos/search/tag filter is active isn't silently
+  // truncated to the visible subset.
+  window._rookieFullPool = rookies.slice();
+
   // Apply position filter
   if(_rookiePosFilter)rookies=rookies.filter(r=>r.pos===_rookiePosFilter);
 
@@ -1391,6 +1410,8 @@ function renderRookieBoard(){
     const myIdx={}; (_bigBoardData().myOrder||[]).forEach((pid,i)=>{myIdx[pid]=i;});
     rookies.sort((a,b)=>{const ai=myIdx[a.pid],bi=myIdx[b.pid]; if(ai!=null&&bi!=null)return ai-bi; if(ai!=null)return -1; if(bi!=null)return 1; return (b.dhq||0)-(a.dhq||0);});
   }
+  // Read the board once per render (tiers map) instead of per-row in _renderRookieRow.
+  window._rbBoardCache = _rookieLane==='my' ? _bigBoardData() : null;
 
   rookies=rookies.slice(0,120);
   window._rookieCache = {};
@@ -1458,6 +1479,7 @@ function renderRookieBoard(){
   }, {});
   const allTagCount = tagCountBase.length;
   const boardTitle = _rookieTagFilter ? `${_rookieTagLabel(_rookieTagFilter)} Board` : 'Market Board';
+  const _boardLocked = _rookieLanesLocked();
 
   el.innerHTML=`
     <section class="rookie-board-shell">
@@ -1475,9 +1497,9 @@ function renderRookieBoard(){
       </div>
       <div class="rookie-lane-row">
         <button class="${_rookieLane==='market'?'active':''}" onclick="_rookieSetLane('market')">Market</button>
-        <button class="${_rookieLane==='ai'?'active':''}" onclick="_rookieSetLane('ai')">AI Board</button>
-        <button class="${_rookieLane==='my'?'active':''}" onclick="_rookieSetLane('my')">My Board</button>
-        ${_rookieLane==='my'?`<button class="rookie-lane-seed" onclick="_rookieSeedFromAi()">Seed from AI</button>`:''}
+        <button class="${_rookieLane==='ai'?'active':''}${_boardLocked?' rookie-lane-locked':''}" onclick="_rookieSetLane('ai')">AI Board${_boardLocked?' <span class="rookie-lane-pro">PRO</span>':''}</button>
+        <button class="${_rookieLane==='my'?'active':''}${_boardLocked?' rookie-lane-locked':''}" onclick="_rookieSetLane('my')">My Board${_boardLocked?' <span class="rookie-lane-pro">PRO</span>':''}</button>
+        ${_rookieLane==='my'&&!_boardLocked?`<button class="rookie-lane-seed" onclick="_rookieSeedFromAi()">Seed from AI</button>`:''}
       </div>
       ${_rookieLane!=='market'?`<div class="rookie-lane-note">${_rookieLane==='ai'?'Re-ranked for your roster needs + GM strategy — value clamped ±22% of DHQ.':'Your custom board — tap a player to move it or set a tier. Edits save to this device.'}</div>`:''}
       <div class="rookie-tag-filter-row">
@@ -1570,7 +1592,7 @@ function _renderRookieRow(r, i) {
   const posStyle=typeof getPosBadgeStyle==='function'?getPosBadgeStyle(r.pos):'';
   const tag = _rookieTags()[r.pid] || '';
   const tagChip = tag ? `<span class="rookie-row-tag ${_rookieTagClass(tag)}">${_rookieTagLabel(tag)}</span>` : '';
-  const _myBoard = _rookieLane === 'my' ? _bigBoardData() : null;
+  const _myBoard = _rookieLane === 'my' ? (window._rbBoardCache || _bigBoardData()) : null;
   const _myTier = _myBoard?.tiers?.[r.pid];
   const tierChip = _myTier ? `<span class="rookie-row-tier">T${_myTier}</span>` : '';
   // Draft badge: drafted players get team + round.pick chip; UDFA gets a UDFA chip
@@ -1626,7 +1648,9 @@ function _renderGroupedRookies(rookies) {
   return posOrder
     .filter(pos => groups[pos]?.length)
     .map(pos => {
-      const players = groups[pos].sort((a, b) => b.dhq - a.dhq);
+      // Market lane sorts each group by DHQ; AI/My lanes keep the incoming
+      // (already lane-ordered) sequence so grouping doesn't discard the ranking.
+      const players = _rookieLane === 'market' ? groups[pos].sort((a, b) => b.dhq - a.dhq) : groups[pos];
       const topDHQ = players[0]?.dhq || 0;
       const header = `<div style="padding:8px 8px 4px;font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;border-top:1px solid var(--border);margin-top:4px">${pos} · ${players.length} prospects · Top: ${topDHQ.toLocaleString()} DHQ</div>`;
       return header + players.map((r, i) => _renderRookieRow(r, i)).join('');

@@ -311,15 +311,18 @@ function _anTradesTab(d, ctx) {
       let dhqSum = 0, ageSum = 0;
       (roster?.players || []).forEach(pid => {
         const dhq = _anVal(pid) || 0;
-        const age = players[pid]?.age;
-        if (dhq > 0 && Number.isFinite(age)) { dhqSum += dhq; ageSum += age * dhq; }
+        const age = Number(players[pid]?.age);
+        if (dhq > 0 && Number.isFinite(age) && age > 0) { dhqSum += dhq; ageSum += age * dhq; }
       });
-      const picks = a.picksAssessment?.totalPicks ?? ((ctx.picksByOwner?.[a.rosterId] || []).length || null);
+      const picks = a.picksAssessment?.totalPicks ?? null;
       return { rosterId: a.rosterId, name: _anOwnerName(a.rosterId), wAge: dhqSum > 0 ? ageSum / dhqSum : 0, picks, window: a.window, healthScore: a.healthScore || 0 };
     });
+    // No DHQ signal anywhere (redraft / CTB) → no buy-side read, so skip the
+    // board entirely rather than show a misleading sellers-only half.
+    const hasValue = withAge.some(a => a.wAge > 0);
     const buyers = withAge.filter(a => a.window === 'CONTENDING' && a.wAge > 0).sort((x, y) => y.wAge - x.wAge).slice(0, 3);
     const sellers = withAge.filter(a => a.window === 'REBUILDING').sort((x, y) => ((y.picks || 0) - (x.picks || 0)) || (x.healthScore - y.healthScore)).slice(0, 3);
-    if (buyers.length || sellers.length) {
+    if (hasValue && (buyers.length || sellers.length)) {
       const buyRows = buyers.map(b => ({ kicker: 'Buyer', label: b.name, detail: 'oldest contending core — overpays for win-now', value: 'age ' + b.wAge.toFixed(1), color: 'var(--amber)' }));
       const sellRows = sellers.map(s => ({ kicker: 'Seller', label: s.name, detail: 'rebuilding — moves vets for futures', value: Number.isFinite(s.picks) ? s.picks + ' pick' + (s.picks === 1 ? '' : 's') : 'sells vets', color: 'var(--accent)' }));
       const body = (buyers.length ? _anDataStack(buyRows) : '') + (sellers.length ? _anDataStack(sellRows) : '');
@@ -469,13 +472,14 @@ function _anRunReport(config) {
         const p = players[pid]; if (!p) return;
         const pos = normPos(p.position) || p.position || '?';
         const ps = S.playerStats?.[pid] || {};
-        const ppg = (ps.seasonAvg ?? ps.prevAvg);
+        const ppgRaw = (ps.seasonAvg ?? ps.prevAvg);
+        const ppg = Number.isFinite(+ppgRaw) ? +ppgRaw : null;
         const pw = window.App?.peakWindows?.[pos];
         const peakYrs = (pw && p.age) ? Math.max(0, pw[1] - p.age) : null;
         rows.push({
           name: p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim() || ('Player ' + pid),
           pos, age: p.age || null, team: p.team || 'FA', dhq: _anVal(pid) || 0,
-          ppg: (ppg != null ? +ppg : null), peakYrs, owner, tier: assess?.tier || 'N/A',
+          ppg, peakYrs, owner, tier: assess?.tier || 'N/A',
           contend: contendBy[String(r.roster_id)] || 'N/A', pid,
         });
       });
@@ -551,7 +555,7 @@ function _anNewReport() { _anBuilderDraft = { id: 'r' + Date.now(), name: '', da
 function _anEditReport(id) { const r = _customReports.find(x => x.id === id); if (r) { _anBuilderDraft = JSON.parse(JSON.stringify(r)); _anActiveCustomId = null; _anActivePreset = null; renderAnalyticsPanel(); } }
 function _anDeleteReport(id) { _customReports = _customReports.filter(x => x.id !== id); _anSaveCustomReports(); if (_anActiveCustomId === id) _anActiveCustomId = null; renderAnalyticsPanel(); }
 function _anOpenCustom(id) { _anActiveCustomId = id; _anBuilderDraft = null; _anActivePreset = null; renderAnalyticsPanel(); }
-function _anBuilderSetSource(ds) { if (!_anBuilderDraft) return; _anBuilderDraft.dataSource = ds; _anBuilderDraft.columns = ds === 'players' ? ['name', 'pos', 'age', 'dhq', 'owner'] : ['teamName', 'record', 'healthScore', 'totalDHQ']; _anBuilderDraft.filters = [{ field: '', op: 'gte', value: '' }]; _anBuilderDraft.sort = { field: ds === 'players' ? 'dhq' : 'healthScore', dir: 'desc' }; renderAnalyticsPanel(); }
+function _anBuilderSetSource(ds) { if (!_anBuilderDraft) return; _anBuilderReadForm(); _anBuilderDraft.dataSource = ds; _anBuilderDraft.columns = ds === 'players' ? ['name', 'pos', 'age', 'dhq', 'owner'] : ['teamName', 'record', 'healthScore', 'totalDHQ']; _anBuilderDraft.filters = [{ field: '', op: 'gte', value: '' }]; _anBuilderDraft.sort = { field: ds === 'players' ? 'dhq' : 'healthScore', dir: 'desc' }; renderAnalyticsPanel(); }
 function _anBuilderReadForm() {
   if (!_anBuilderDraft) return;
   const g = id => document.getElementById(id), d = _anBuilderDraft;
@@ -564,14 +568,20 @@ function _anBuilderReadForm() {
   const lim = parseInt(g('an-rpt-limit')?.value, 10); d.limit = (Number.isFinite(lim) && lim > 0) ? lim : null;
 }
 function _anBuilderSync() { _anBuilderReadForm(); renderAnalyticsPanel(); }
+// Changing the filter field clears the carried-over value so a stale token
+// (e.g. 'QB' left over when switching to a numeric field) can't poison the run.
+function _anBuilderFieldChange() { _anBuilderReadForm(); if (_anBuilderDraft?.filters?.[0]) _anBuilderDraft.filters[0].value = ''; renderAnalyticsPanel(); }
 function _anCancelBuilder() { _anBuilderDraft = null; renderAnalyticsPanel(); }
 function _anSaveReport() {
   if (!_anBuilderDraft) return;
   _anBuilderReadForm();
   const d = _anBuilderDraft;
   d.name = (d.name || '').trim() || 'Untitled Report';
+  // Never persist a column-less (un-runnable) report — fall back to defaults.
+  if (!(d.columns || []).length) d.columns = d.dataSource === 'players' ? ['name', 'pos', 'age', 'dhq', 'owner'] : ['teamName', 'record', 'healthScore', 'totalDHQ'];
   const idx = _customReports.findIndex(x => x.id === d.id);
   if (idx >= 0) _customReports[idx] = d; else _customReports.unshift(d);
+  _customReports = _customReports.slice(0, 12); // cap in memory, not just on write
   _anSaveCustomReports();
   _anActiveCustomId = d.id; _anBuilderDraft = null;
   renderAnalyticsPanel();
@@ -582,6 +592,7 @@ window._anDeleteReport = _anDeleteReport;
 window._anOpenCustom = _anOpenCustom;
 window._anBuilderSetSource = _anBuilderSetSource;
 window._anBuilderSync = _anBuilderSync;
+window._anBuilderFieldChange = _anBuilderFieldChange;
 window._anCancelBuilder = _anCancelBuilder;
 window._anSaveReport = _anSaveReport;
 
@@ -604,7 +615,7 @@ function _anBuilderForm(d) {
     <label class="an-rpt-label">Columns</label><div class="an-rpt-cols">${colChecks}</div>
     <label class="an-rpt-label">Filter <span style="color:var(--text3);font-weight:600;text-transform:none;letter-spacing:0">(optional)</span></label>
     <div class="an-rpt-filter">
-      <select id="an-rpt-ffield" class="an-rpt-sel" onchange="_anBuilderSync()">${fieldOpts}</select>
+      <select id="an-rpt-ffield" class="an-rpt-sel" onchange="_anBuilderFieldChange()">${fieldOpts}</select>
       <select id="an-rpt-fop" class="an-rpt-sel an-rpt-sel-sm">${opOpts}</select>
       <input id="an-rpt-fval" type="text" class="an-rpt-input"${optSet ? ' list="an-rpt-vals"' : ''} placeholder="value" value="${_anEsc(f0.value || '')}">${datalist}
     </div>
@@ -612,7 +623,7 @@ function _anBuilderForm(d) {
     <div class="an-rpt-filter">
       <select id="an-rpt-sfield" class="an-rpt-sel">${sortOpts}</select>
       <select id="an-rpt-sdir" class="an-rpt-sel an-rpt-sel-sm"><option value="desc"${d.sort?.dir !== 'asc' ? ' selected' : ''}>high→low</option><option value="asc"${d.sort?.dir === 'asc' ? ' selected' : ''}>low→high</option></select>
-      <input id="an-rpt-limit" type="text" inputmode="numeric" class="an-rpt-input an-rpt-input-sm" placeholder="limit" value="${d.limit || ''}">
+      <input id="an-rpt-limit" type="text" inputmode="numeric" class="an-rpt-input an-rpt-input-sm" placeholder="limit" value="${_anEsc(d.limit || '')}">
     </div>
     <div class="an-rpt-actions"><button class="scout-primary-btn" onclick="_anSaveReport()">Save &amp; Run</button><button class="an-seg" onclick="_anCancelBuilder()">Cancel</button></div>
   </div>`;
@@ -641,10 +652,18 @@ function _anReportsTab(d, ctx) {
 // 4 seasons and flags the season ("cliff") the core's value falls off.
 const _AN_WF_POS = ['QB', 'RB', 'WR', 'TE', 'K', 'DL', 'LB', 'DB'];
 const _AN_WF_HORIZON = 4;
+// Projection horizon mirrors WR: the saved GM-strategy timeline drives how many
+// seasons we forecast (1_year → 1, 2_3_years → 3, dynasty/default → 4), so a
+// win-now GM doesn't see a full 4-season aging curve.
+function _anWfHorizon() {
+  const tl = (window.GMStrategy?.getStrategy ? (window.GMStrategy.getStrategy() || {}) : {}).timeline;
+  return tl === '1_year' ? 1 : tl === '2_3_years' ? 3 : _AN_WF_HORIZON;
+}
 function computeWindowForecast(myRid, rosters, playersData, league) {
   const season = parseInt(league && league.season, 10) || new Date().getFullYear();
+  const horizon = _anWfHorizon();
   const roster = (rosters || []).find(r => r.roster_id === myRid);
-  if (!roster) return { groups: [], season };
+  if (!roster) return { groups: [], season, horizon };
   const normPos = window.App?.normPos || (p => p);
   const groups = {};
   (roster.players || []).forEach(pid => {
@@ -665,25 +684,25 @@ function computeWindowForecast(myRid, rosters, playersData, league) {
     const players = groups[pos].sort((a, b) => b.dhq - a.dhq);
     const totalDhq = players.reduce((s, p) => s + p.dhq, 0);
     const primeShares = [];
-    for (let t = 0; t < _AN_WF_HORIZON; t++) {
+    for (let t = 0; t < horizon; t++) {
       const prime = players.reduce((s, p) => s + ((p.age + t) <= peakEnd ? p.dhq : 0), 0);
       primeShares.push(totalDhq > 0 ? prime / totalDhq : 0);
     }
     let cliffT = -1;
-    for (let t = 0; t < _AN_WF_HORIZON; t++) { if (primeShares[t] < 0.5) { cliffT = t; break; } }
+    for (let t = 0; t < horizon; t++) { if (primeShares[t] < 0.5) { cliffT = t; break; } }
     const wAge = totalDhq > 0 ? players.reduce((s, p) => s + p.age * p.dhq, 0) / totalDhq : 0;
     const sellBy = players.filter(p => p.age >= peakEnd - 1 && p.age <= declineEnd && p.dhq >= 2000);
     return { pos, players, totalDhq, primeShares, cliffT, wAge, peakEnd, declineEnd, sellBy };
   }).sort((a, b) => {
-    const at = a.cliffT === -1 ? _AN_WF_HORIZON : a.cliffT;
-    const bt = b.cliffT === -1 ? _AN_WF_HORIZON : b.cliffT;
+    const at = a.cliffT === -1 ? horizon : a.cliffT;
+    const bt = b.cliffT === -1 ? horizon : b.cliffT;
     return at !== bt ? at - bt : b.totalDhq - a.totalDhq;
   });
-  return { groups: out, season };
+  return { groups: out, season, horizon };
 }
 function _anWindowTab(d, ctx) {
   const fc = computeWindowForecast(ctx.myRid, _anS().rosters, _anS().players, _anLeague());
-  const groups = fc.groups, season = fc.season, horizon = _AN_WF_HORIZON;
+  const groups = fc.groups, season = fc.season, horizon = fc.horizon;
   if (!groups.length) {
     return _anSection('Window Forecast', '', '<p class="an-sub" style="padding:6px 2px">No age data yet — sync your roster to project your contention window.</p>');
   }
