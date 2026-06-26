@@ -1071,6 +1071,7 @@ let _rookieShowAll=false;
 let _rookieGroupByPos=false;
 let _rookieSearch='';
 let _rookieTagFilter='';
+let _rookieLane='market'; // 'market' (DHQ) | 'ai' (re-ranked) | 'my' (custom board)
 
 function _rookieEsc(s) {
   const esc = window.escHtml || window.App?.escHtml;
@@ -1156,6 +1157,83 @@ function _rookieOpen(pid) {
   if (typeof window.openPlayerModal === 'function') window.openPlayerModal(pid);
 }
 window._rookieOpen = _rookieOpen;
+
+// ── Big-board lanes (Market / AI / My) — port of warroom/js/draft ──────────
+// AI Board re-ranks the DHQ pool by roster need + GM strategy (buildAiRecommendedOrder,
+// context.js). My Board is a user-owned ordering with ▲/▼ moves + 1-12 tiers, persisted
+// to localStorage (WR's onMovePlayer/onEditTier pattern; no drag-drop needed on mobile).
+function _bigBoardKey(){ const lid = window.S?.currentLeagueId || window.App?.S?.currentLeagueId || ''; return 'rookie_big_board_' + lid; }
+function _bigBoardData(){
+  try { const b = JSON.parse(localStorage.getItem(_bigBoardKey()) || '{}') || {}; b.myOrder = b.myOrder || []; b.tiers = b.tiers || {}; return b; }
+  catch { return { myOrder: [], tiers: {} }; }
+}
+function _bigBoardSave(patch){
+  const b = _bigBoardData();
+  Object.assign(b, patch || {});
+  try { localStorage.setItem(_bigBoardKey(), JSON.stringify(b)); } catch { /* ignore */ }
+  if (window.OD?.saveBigBoard) { try { window.OD.saveBigBoard(_bigBoardKey(), b); } catch { /* ignore */ } }
+}
+// Re-rank a rookie pool by roster need + GM strategy. Scout simplifications vs WR:
+// no format adapter (positionMultipliers=1) and no projectPlayerValue (base = raw DHQ).
+function buildAiRookieOrder(rookies){
+  const strat = (window.GMStrategy?.getStrategy ? window.GMStrategy.getStrategy() : {}) || {};
+  const assess = (window.assessTeamFromGlobal || window.App?.assessTeamFromGlobal || (() => null))(window.S?.myRosterId);
+  const needs = new Set((assess?.needs || []).map(n => typeof n === 'string' ? n : n?.pos).filter(Boolean));
+  const draftStyle = strat.draftStyle || strat.mode || 'mix';
+  const needBias = draftStyle === 'need' ? 1.35 : draftStyle === 'bpa' ? 0.8 : 1;
+  const youthPremium = (strat.timeline === 'rebuild' || strat.timeline === '2_3_years' || strat.timeline === 'dynasty_long') ? 1.12 : 1;
+  const targets = new Set(strat.targetPositions || strat.targets || []);
+  const fades = new Set(strat.sellPositions || strat.blockPositions || []);
+  const score = p => {
+    const pos = p.pos || p.position || '';
+    const base = Number(p.dhq || 0);
+    let v = base;
+    if (needs.has(pos)) v *= (1 + 0.12 * needBias);
+    if (targets.has(pos)) v *= 1.05;
+    if (fades.has(pos)) v *= 0.96;
+    const age = Number(p.age || 0);
+    if (age && age <= 24 && ['RB', 'WR', 'TE'].includes(pos)) v *= youthPremium;
+    if (parseInt(p.csvTier, 10) === 1) v *= 1.04;
+    if (base) v = Math.max(base * 0.82, Math.min(base * 1.22, v)); // clamp ±22% of base
+    return v;
+  };
+  return rookies.slice().sort((a, b) => { const d = score(b) - score(a); return Math.abs(d) > 0.001 ? d : (b.dhq || 0) - (a.dhq || 0); }).map(r => r.pid);
+}
+function _rookieSetLane(lane){ _rookieLane = lane; _rookieShowAll = false; renderRookieBoard(); }
+window._rookieSetLane = _rookieSetLane;
+function _rookieSeedFromAi(){
+  const pool = Object.values(window._rookieCache || {});
+  if (!pool.length) return;
+  _bigBoardSave({ myOrder: buildAiRookieOrder(pool) });
+  if (typeof showToast === 'function') showToast('Seeded My Board from AI');
+  renderRookieBoard();
+}
+window._rookieSeedFromAi = _rookieSeedFromAi;
+function _rookieMove(pid, delta){
+  const b = _bigBoardData();
+  let order = (b.myOrder || []).slice();
+  if (!order.length) order = Object.values(window._rookieCache || {}).map(r => r.pid); // lazy-init to current order
+  let idx = order.indexOf(pid);
+  if (idx < 0) { order.push(pid); idx = order.length - 1; }
+  const next = Math.max(0, Math.min(order.length - 1, idx + Number(delta)));
+  if (next !== idx) { const [m] = order.splice(idx, 1); order.splice(next, 0, m); }
+  _bigBoardSave({ myOrder: order });
+  renderRookieBoard();
+}
+window._rookieMove = _rookieMove;
+function _rookieSetTier(pid){
+  const b = _bigBoardData();
+  const cur = b.tiers[pid] || '';
+  const raw = prompt('Tier for this prospect (1-12, blank to clear):', cur ? String(cur) : '');
+  if (raw === null) return;
+  const t = String(raw).trim();
+  const tiers = { ...b.tiers };
+  if (t === '') { delete tiers[pid]; }
+  else { const v = parseInt(t, 10); if (!Number.isFinite(v) || v < 1 || v > 12) { if (typeof showToast === 'function') showToast('Tier must be 1-12'); return; } tiers[pid] = v; }
+  _bigBoardSave({ tiers });
+  renderRookieBoard();
+}
+window._rookieSetTier = _rookieSetTier;
 
 function renderRookieBoard(){
   const $ = window.$ || (id => document.getElementById(id));
@@ -1305,6 +1383,15 @@ function renderRookieBoard(){
     return 0;
   });
 
+  // Big-board lanes: re-order the pool by the AI recommendation or the user's custom board.
+  if(_rookieLane==='ai'){
+    const aiIdx={}; buildAiRookieOrder(rookies).forEach((pid,i)=>{aiIdx[pid]=i;});
+    rookies.sort((a,b)=>(aiIdx[a.pid]??9999)-(aiIdx[b.pid]??9999));
+  } else if(_rookieLane==='my'){
+    const myIdx={}; (_bigBoardData().myOrder||[]).forEach((pid,i)=>{myIdx[pid]=i;});
+    rookies.sort((a,b)=>{const ai=myIdx[a.pid],bi=myIdx[b.pid]; if(ai!=null&&bi!=null)return ai-bi; if(ai!=null)return -1; if(bi!=null)return 1; return (b.dhq||0)-(a.dhq||0);});
+  }
+
   rookies=rookies.slice(0,120);
   window._rookieCache = {};
   rookies.forEach(r => { window._rookieCache[r.pid] = r; });
@@ -1386,6 +1473,13 @@ function renderRookieBoard(){
         <input id="rookie-search" value="${_rookieEsc(_rookieSearch)}" placeholder="Search rookies, college, team..." oninput="_rookieSetSearch(this.value)" />
         <button onclick="_rookieSetSearch('')" ${_rookieSearch ? '' : 'disabled'}>Clear</button>
       </div>
+      <div class="rookie-lane-row">
+        <button class="${_rookieLane==='market'?'active':''}" onclick="_rookieSetLane('market')">Market</button>
+        <button class="${_rookieLane==='ai'?'active':''}" onclick="_rookieSetLane('ai')">AI Board</button>
+        <button class="${_rookieLane==='my'?'active':''}" onclick="_rookieSetLane('my')">My Board</button>
+        ${_rookieLane==='my'?`<button class="rookie-lane-seed" onclick="_rookieSeedFromAi()">Seed from AI</button>`:''}
+      </div>
+      ${_rookieLane!=='market'?`<div class="rookie-lane-note">${_rookieLane==='ai'?'Re-ranked for your roster needs + GM strategy — value clamped ±22% of DHQ.':'Your custom board — tap a player to move it or set a tier. Edits save to this device.'}</div>`:''}
       <div class="rookie-tag-filter-row">
         ${[
           ['', 'All tags', allTagCount],
@@ -1476,6 +1570,9 @@ function _renderRookieRow(r, i) {
   const posStyle=typeof getPosBadgeStyle==='function'?getPosBadgeStyle(r.pos):'';
   const tag = _rookieTags()[r.pid] || '';
   const tagChip = tag ? `<span class="rookie-row-tag ${_rookieTagClass(tag)}">${_rookieTagLabel(tag)}</span>` : '';
+  const _myBoard = _rookieLane === 'my' ? _bigBoardData() : null;
+  const _myTier = _myBoard?.tiers?.[r.pid];
+  const tierChip = _myTier ? `<span class="rookie-row-tier">T${_myTier}</span>` : '';
   // Draft badge: drafted players get team + round.pick chip; UDFA gets a UDFA chip
   const draftChip = r.draftRound && r.draftPick
     ? `<span style="font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;background:var(--accentL);color:var(--accent);font-family:'JetBrains Mono',monospace;flex-shrink:0">${_rookieEsc(r.nflTeam||'???')} ${window.formatNFLDraftSlot(r.draftRound, r.draftPick)}</span>`
@@ -1493,6 +1590,7 @@ function _renderRookieRow(r, i) {
         </div>
       </div>
       ${draftChip}
+      ${tierChip}
       ${tagChip}
       <span style="width:36px;text-align:center"><span class="rr-pos" style="${posStyle};font-size:13px;padding:1px 4px">${r.pos}</span></span>
       <span style="width:32px;text-align:center;font-size:13px;color:var(--text3)">${r.age||'\u2014'}</span>
@@ -1508,6 +1606,11 @@ function _renderRookieRow(r, i) {
       </div>
       ${r.csvSummary?'<div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:8px;padding:8px;background:var(--bg3);border-radius:6px">'+_rookieEsc(r.csvSummary)+(r.csvSummary.length>=300?'...':'')+'</div>':''}
       ${_rookieTagControls(r.pid)}
+      ${_rookieLane==='my'?`<div class="rookie-my-controls">
+        <button onclick="event.stopPropagation();_rookieMove('${r.pid}',-1)">&#9650; Move up</button>
+        <button onclick="event.stopPropagation();_rookieMove('${r.pid}',1)">&#9660; Move down</button>
+        <button onclick="event.stopPropagation();_rookieSetTier('${r.pid}')">Set tier${_myTier?' (T'+_myTier+')':''}</button>
+      </div>`:''}
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn btn-sm" onclick="fillGlobalChat('Full scouting report on ${(r.p?.full_name||r.name||'').replace(/'/g,"\\'")} (${r.pos}, ${r.college||'Unknown'}). Include strengths, weaknesses, NFL comparison, and where I should draft them.')">Scout Report</button>
         <button class="btn btn-sm btn-ghost" onclick="_rookieOpen('${r.pid}')">Player Card</button>

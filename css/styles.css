@@ -1439,6 +1439,16 @@ body.gm-bar-active .gm-bar-scrim{opacity:1;pointer-events:auto}
 .rookie-tag-filter-row button.active.priority{border-color:rgba(212,175,55,.34);background:var(--accentL);color:var(--accent)}
 .rookie-tag-filter-row button.active.fade{border-color:rgba(239,68,68,.28);background:rgba(239,68,68,.1);color:var(--red)}
 .rookie-board-pos-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+/* Big-board lanes (Market / AI / My) */
+.rookie-lane-row{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.rookie-lane-row button{flex:1;min-width:64px;border:1px solid var(--border);border-radius:11px;background:var(--bg3);color:var(--text3);font-family:inherit;font-size:12px;font-weight:850;cursor:pointer;padding:9px 8px}
+.rookie-lane-row button.active{border-color:rgba(212,175,55,.34);background:var(--accentL);color:var(--accent)}
+.rookie-lane-row button.rookie-lane-seed{flex:0 0 auto;background:var(--accentL);border-color:rgba(212,175,55,.3);color:var(--accent);font-weight:800}
+.rookie-lane-note{font-size:12px;color:var(--text3);line-height:1.45;margin:-2px 2px 9px}
+.rookie-row-tier{font-size:10px;font-weight:900;letter-spacing:.04em;border-radius:6px;padding:3px 6px;white-space:nowrap;flex-shrink:0;border:1px solid rgba(212,175,55,.34);background:var(--accentL);color:var(--accent);font-family:'JetBrains Mono',monospace}
+.rookie-my-controls{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.rookie-my-controls button{border:1px solid var(--border);border-radius:10px;background:var(--bg3);color:var(--text2);font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:7px 11px}
+.rookie-my-controls button:hover{border-color:rgba(212,175,55,.34);color:var(--accent)}
 .rookie-row-tag{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.05em;border-radius:999px;padding:3px 6px;white-space:nowrap;flex-shrink:0;border:1px solid var(--border);background:var(--bg3);color:var(--text3)}
 .rookie-row-tag.target{border-color:rgba(52,211,153,.28);background:rgba(52,211,153,.1);color:var(--green)}
 .rookie-row-tag.watch{border-color:rgba(96,165,250,.28);background:rgba(96,165,250,.1);color:#60a5fa}
