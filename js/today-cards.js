@@ -33,12 +33,11 @@ function _tcBuildCtx(S, roster, league, phase, assessment) {
   const ranked = [...all].sort((a, b) => (b.healthScore || 0) - (a.healthScore || 0));
   const rank = (myRid != null) ? (ranked.findIndex(a => a.rosterId === myRid) + 1) : 0;
   const phaseStr = phase?.phase || '';
-  const tagCounts = {
-    trade: _tcSafe(() => window.getPlayersByTag('trade').length) || 0,
-    cut: _tcSafe(() => window.getPlayersByTag('cut').length) || 0,
-    watch: _tcSafe(() => window.getPlayersByTag('watch').length) || 0,
-    untouchable: _tcSafe(() => window.getPlayersByTag('untouchable').length) || 0,
-  };
+  // Tally all tag counts in one pass over window._playerTags (was 4 getPlayersByTag
+  // calls, each of which rebuilt + mapped the whole tag pool just to read .length).
+  const tagCounts = { trade: 0, cut: 0, watch: 0, untouchable: 0 };
+  const _pt = window._playerTags || {};
+  for (const pid in _pt) { const t = _pt[pid]; if (tagCounts[t] != null) tagCounts[t]++; }
   return {
     S, roster, league, myRid, me: assessment, all, ranked, rank,
     elite: (window.App?.countElitePlayers || window.countElitePlayers || (() => 0))(roster?.players || []),
@@ -91,7 +90,7 @@ const _TC_CATALOG = [
     relevance(ctx) {
       const g = ctx.posGrades;
       if (!g || !g.some(x => x.mySum > 0)) return 0;
-      const weak = g.filter(x => x.grade === 'D' || x.grade === 'F');
+      const weak = g.filter(x => x.mySum > 0 && (x.grade === 'D' || x.grade === 'F'));
       const pa = ctx.me?.posAssessment || {};
       const deficits = Object.values(pa).filter(v => v && (v.status === 'deficit' || v.status === 'thin')).length;
       if (!weak.length && deficits < 2) return 0;
@@ -99,7 +98,7 @@ const _TC_CATALOG = [
     },
     render(ctx) {
       const g = ctx.posGrades || [];
-      const weak = g.filter(x => x.grade === 'D' || x.grade === 'F').sort((a, b) => b.rank - a.rank);
+      const weak = g.filter(x => x.mySum > 0 && (x.grade === 'D' || x.grade === 'F')).sort((a, b) => b.rank - a.rank);
       const worst = [...g].filter(x => x.mySum > 0).sort((a, b) => _tcGradeRank(b.grade) - _tcGradeRank(a.grade))[0];
       const rows = weak.slice(0, 2).map(x => ({ label: x.pos + ' room', value: 'Grade ' + x.grade + ' · #' + x.rank + '/' + x.totalTeams, color: x.col }));
       return _tcCard({ kicker: 'Coverage', title: worst ? ('Weakest: ' + worst.pos + ' (' + worst.grade + ')') : 'Coverage', titleColor: worst?.col, rows: rows.length ? rows : [{ label: 'Status', value: 'Rooms graded league-relative' }] });
