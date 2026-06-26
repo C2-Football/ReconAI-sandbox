@@ -1222,7 +1222,10 @@ function _rookieMove(pid, delta){
   if (_rookieLanesLocked()) { _rookiePromptUpgrade(); return; }
   const b = _bigBoardData();
   let order = (b.myOrder || []).slice();
-  if (!order.length) order = (window._rookieFullPool || Object.values(window._rookieCache || {})).map(r => r.pid); // lazy-init to FULL pool, not filtered view
+  // Lazy-init from the FULL pool in DHQ-desc order — matching the empty-myOrder
+  // display baseline — so the first move only nudges the tapped player instead
+  // of scrambling the board into raw build order.
+  if (!order.length) order = (window._rookieFullPool || Object.values(window._rookieCache || {})).slice().sort((a, b) => (b.dhq || 0) - (a.dhq || 0)).map(r => r.pid);
   let idx = order.indexOf(pid);
   if (idx < 0) { order.push(pid); idx = order.length - 1; }
   const next = Math.max(0, Math.min(order.length - 1, idx + Number(delta)));

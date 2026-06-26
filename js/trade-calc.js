@@ -2840,7 +2840,7 @@ function renderTradeFinder(container) {
     const acceptanceFloor = _finderActionableAcceptanceFloor();
     const hiddenMoonshotCount = _finderResults.reduce((sum, r) => sum + (r.trades || []).filter(t => t.likelihood < acceptanceFloor).length, 0);
     const visibleResults = _finderResults
-      .map(r => ({ ...r, trades: _finderShowMoonshots ? (r.trades || []) : (r.trades || []).filter(t => t.likelihood >= acceptanceFloor) }))
+      .map(r => ({ ...r, _allTrades: r.trades || [], trades: _finderShowMoonshots ? (r.trades || []) : (r.trades || []).filter(t => t.likelihood >= acceptanceFloor) }))
       .filter(r => r.trades.length);
     if (!visibleResults.length) {
       html += `<div style="text-align:center;padding:20px;color:var(--text3)">No actionable trades clear ${acceptanceFloor}% acceptance.</div>`;
@@ -2858,7 +2858,11 @@ function renderTradeFinder(container) {
       if (r.dnaKey !== 'NONE') html += `<span style="font-size:13px;color:${dna.color};font-weight:700">${dna.label}</span>`;
       html += `</div>`;
 
-      r.trades.forEach((t, tradeIndex) => {
+      r.trades.forEach((t) => {
+        // Index into the UNFILTERED trades array (what _tcGetFinderDeal resolves
+        // against); the visible loop is moonshot-filtered + fit-sorted, so the
+        // filtered position can diverge from the real index.
+        const tradeIndex = r._allTrades.indexOf(t);
         const giveTotal = t.give.reduce((s,p) => s + p.val, 0) + t.givePicks.reduce((s,p) => s + (p.val||0), 0);
         const getTotal = t.receive.reduce((s,p) => s + p.val, 0) + t.receivePicks.reduce((s,p) => s + (p.val||0), 0);
         const diffLabel = t.diff >= 0 ? `+${Math.round(t.diff).toLocaleString()}` : Math.round(t.diff).toLocaleString();

@@ -499,6 +499,9 @@ function _anRunReport(config) {
     if (!f.field || !f.op || (f.value === '' && f.value !== 0)) return;
     rows = rows.filter(row => {
       const val = row[f.field];
+      // Don't treat missing data as 0 in ordered comparisons (e.g. a null ppg
+      // would wrongly match "ppg < 5"); exclude null/N-A cells from gt/lt/gte/lte.
+      if ((f.op === 'gt' || f.op === 'lt' || f.op === 'gte' || f.op === 'lte') && (val == null || val === 'N/A')) return false;
       const cmp = isNaN(Number(f.value)) ? f.value : Number(f.value);
       const numVal = typeof val === 'number' ? val : (isNaN(Number(val)) ? val : Number(val));
       switch (f.op) {
