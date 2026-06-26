@@ -2630,6 +2630,14 @@ input,textarea,select,[contenteditable="true"]{
   .tab-anim{animation:none!important}
 }
 
+/* Today instrument rail — iPad-landscape only (hidden on phone). */
+.scout-instrument-rail{display:none}
+.rail-kicker{color:var(--accent);font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em}
+.rail-big{display:block;color:var(--text);font-size:1.4rem;font-weight:800;margin-top:5px;line-height:1}
+.rail-big small{font-size:.7em;color:var(--text3);font-weight:600}
+.rail-detail{display:block;color:var(--text3);font-style:normal;font-size:.66rem;margin-top:3px}
+.rail-chip{border:1px solid var(--border2);background:var(--bg2);border-radius:10px;padding:11px 13px}
+
 /* ══════════════════════════════════════════════════════════════════
    iPad / large-screen LANDSCAPE (≥1024px): persistent left nav rail +
    width-filling content. Below 1024px Scout stays the centered phone
@@ -2670,7 +2678,9 @@ input,textarea,select,[contenteditable="true"]{
   #panel-digest .scout-brief-shell { display: block; column-count: 2; column-gap: 20px; }
   #panel-digest .scout-brief-shell > section { break-inside: avoid; margin-bottom: 20px; }
   #panel-digest .scout-brief-shell > .scout-brief-hero,
+  #panel-digest .scout-brief-shell > .scout-instrument-rail,
   #panel-digest .scout-brief-shell > .scout-driftcard { column-span: all; }
+  .scout-instrument-rail { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
 
   /* List-style panels read best as a generous centred column, not full-bleed. */
   #panel-calendar .scout-command-shell,
@@ -2765,7 +2775,17 @@ input,textarea,select,[contenteditable="true"]{
 .analytics-readout summary span{color:var(--accent);font-size:.96rem;font-weight:700;letter-spacing:.02em}
 .analytics-readout summary em{color:var(--text3);font-size:.68rem;font-style:normal;text-align:right}
 .analytics-readout-body{font-size:.82rem;line-height:1.55;padding:12px 14px}
+.an-grade-chip{font-size:12px;font-weight:600;padding:4px 10px;border-radius:8px;border:1px solid;white-space:nowrap}
+.an-grade-chip b{font-weight:800;font-size:13px}
+.analytics-report-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.analytics-report-card{text-align:left;border:1px solid rgba(212,175,55,0.18);background:linear-gradient(135deg,rgba(212,175,55,0.07),rgba(124,107,248,0.02));border-radius:10px;padding:12px;cursor:pointer;font-family:inherit;transition:border-color .15s,background .15s}
+.analytics-report-card:hover{border-color:rgba(212,175,55,0.4)}
+.analytics-report-card.is-active{border-color:var(--accent);background:var(--accentL)}
+.analytics-report-card span{display:block;color:var(--accent);font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em}
+.analytics-report-card strong{display:block;color:var(--text);font-size:.96rem;margin:4px 0 3px}
+.analytics-report-card em{display:block;color:var(--text3);font-style:normal;font-size:.7rem;line-height:1.35}
 @media(max-width:1100px){
+  .analytics-report-grid{grid-template-columns:1fr 1fr}
   .analytics-proof-grid{grid-template-columns:1fr 1fr}
   .analytics-command-panel{grid-template-columns:1fr}
 }

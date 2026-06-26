@@ -23,6 +23,38 @@ function _anVal(pid) {
   return (window.dynastyValue ? window.dynastyValue(pid) : 0) || 0;
 }
 function _anTeamDhq(roster) { return (roster?.players || []).reduce((s, pid) => s + (_anVal(pid) || 0), 0); }
+function _anOwnerName(rid) {
+  const S = _anS();
+  const roster = (S.rosters || []).find(r => r.roster_id === rid);
+  const u = (S.leagueUsers || S.users || []).find(x => x.user_id === roster?.owner_id);
+  return u?.metadata?.team_name || u?.display_name || u?.username || ('Team ' + rid);
+}
+// Ported from warroom/js/core.js calcPosGrades — sums DHQ per position per team,
+// ranks, assigns A–F (re-themed to Scout tokens). Returns [{pos,rank,totalTeams,mySum,grade,col}].
+function _anCalcPosGrades(myRid, rosters, playersData) {
+  const normPos = window.App?.normPos || (p => p);
+  const posOrder = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF', 'DL', 'LB', 'DB'];
+  const totalTeams = (rosters || []).length || 1;
+  return posOrder.map(pos => {
+    const byTeam = (rosters || []).map(r => {
+      const sum = (r.players || []).reduce((s, pid) => {
+        const p = playersData?.[pid];
+        if (p && normPos(p.position) === pos) return s + (_anVal(pid) || 0);
+        return s;
+      }, 0);
+      return { rosterId: r.roster_id, sum };
+    }).sort((a, b) => b.sum - a.sum);
+    const mySum = byTeam.find(t => t.rosterId === myRid)?.sum || 0;
+    const rank = byTeam.findIndex(t => t.rosterId === myRid) + 1;
+    let grade, col;
+    if (rank <= Math.ceil(totalTeams * 0.2)) { grade = 'A'; col = 'var(--green)'; }
+    else if (rank <= Math.ceil(totalTeams * 0.4)) { grade = 'B'; col = 'var(--accent)'; }
+    else if (rank <= Math.ceil(totalTeams * 0.6)) { grade = 'C'; col = 'var(--amber)'; }
+    else if (rank <= Math.ceil(totalTeams * 0.8)) { grade = 'D'; col = 'var(--amber)'; }
+    else { grade = 'F'; col = 'var(--red)'; }
+    return { pos, rank, totalTeams, mySum, grade, col };
+  });
+}
 function _anSigned(v, suffix) {
   if (v == null || !Number.isFinite(Number(v))) return '—';
   const n = Number(v);
@@ -138,11 +170,21 @@ function _anRosterTab(d, ctx) {
     ? _anSection('Priority Evidence', 'Rooms to fix first', _anDataStack(gaps.slice(0, 6).map(g => ({ label: g.action, value: (g.priority || '').toUpperCase(), color: gapColor(g.priority) })), true))
     : '';
 
-  // Coverage Matrix
+  // Coverage Matrix — league-relative A–F grades (fallback to status chips
+  // if DHQ values aren't hydrated yet).
   const pa = me.posAssessment || {};
-  const tone = s => s === 'surplus' ? 'var(--green)' : s === 'ok' ? 'var(--text2)' : s === 'thin' ? 'var(--amber)' : 'var(--red)';
-  const chips = Object.entries(pa).map(([pos, v]) => `<span class="an-chip" style="border-color:${tone(v.status)};color:${tone(v.status)}">${_anEsc(pos)} · ${_anEsc(v.status || '—')}</span>`).join('');
-  const coverage = chips ? _anSection('Coverage Matrix', 'Starter quality by room', `<div class="an-chips">${chips}</div>`) : '';
+  let coverage = '';
+  const grades = _anCalcPosGrades(ctx.myRid, _anS().rosters, _anS().players);
+  if (grades.some(g => g.mySum > 0)) {
+    const lbl = { A: 'Strong', B: 'Solid', C: 'Thin', D: 'Thin', F: 'Weak' };
+    const chips = grades.filter(g => pa[g.pos] != null || g.mySum > 0)
+      .map(g => `<span class="an-grade-chip" style="border-color:${g.col};color:${g.col}" title="Rank ${g.rank}/${g.totalTeams} · ${Math.round(g.mySum).toLocaleString()} DHQ">${_anEsc(g.pos)} <b>${g.grade}</b> · ${lbl[g.grade] || ''}</span>`).join('');
+    coverage = chips ? _anSection('Coverage Matrix', 'Letter grade by room — league-relative', `<div class="an-chips">${chips}</div>`) : '';
+  } else {
+    const tone = s => s === 'surplus' ? 'var(--green)' : s === 'ok' ? 'var(--text2)' : s === 'thin' ? 'var(--amber)' : 'var(--red)';
+    const chips = Object.entries(pa).map(([pos, v]) => `<span class="an-chip" style="border-color:${tone(v.status)};color:${tone(v.status)}">${_anEsc(pos)} · ${_anEsc(v.status || '—')}</span>`).join('');
+    coverage = chips ? _anSection('Coverage Matrix', 'Starter quality by room', `<div class="an-chips">${chips}</div>`) : '';
+  }
 
   // 5-Year Outlook
   const proj = (d.projection || []).slice(0, 5);
@@ -261,10 +303,108 @@ function _anTradesTab(d, ctx) {
   return cmd + proof + waiverEcon + clock + flow + recent;
 }
 
+// ── Players & Picks sub-tab ─────────────────────────────────────────
+let _anAssetsView = 'players';
+try { _anAssetsView = localStorage.getItem('scout_analytics_assets_view') || 'players'; } catch { /* ignore */ }
+let _anAssetPos = 'ALL';
+function _anSetAssetsView(v) { _anAssetsView = v; try { localStorage.setItem('scout_analytics_assets_view', v); } catch { /* ignore */ } renderAnalyticsPanel(); }
+function _anSetAssetPos(p) { _anAssetPos = p; renderAnalyticsPanel(); }
+window._anSetAssetsView = _anSetAssetsView;
+window._anSetAssetPos = _anSetAssetPos;
+
+function _anRenderAssetPlayers(ctx) {
+  const S = _anS();
+  const players = S.players || {};
+  const normPos = window.App?.normPos || (p => p);
+  const all = [];
+  (S.rosters || []).forEach(r => {
+    (r.players || []).forEach(pid => {
+      const p = players[pid]; if (!p) return;
+      all.push({ pid, name: p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim() || ('Player ' + pid), pos: normPos(p.position || '') || '?', team: p.team || 'FA', age: p.age || '', dhq: _anVal(pid) || 0, owner: _anOwnerName(r.roster_id), isMe: r.roster_id === ctx.myRid });
+    });
+  });
+  const order = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF', 'DL', 'LB', 'DB'];
+  const positions = [...new Set(all.map(p => p.pos).filter(Boolean))].sort((a, b) => (order.indexOf(a) < 0 ? 99 : order.indexOf(a)) - (order.indexOf(b) < 0 ? 99 : order.indexOf(b)));
+  const filtered = (_anAssetPos === 'ALL' ? all : all.filter(p => p.pos === _anAssetPos)).sort((a, b) => b.dhq - a.dhq);
+  const filterChips = ['ALL', ...positions].map(pos => `<button class="an-seg${_anAssetPos === pos ? ' active' : ''}" onclick="_anSetAssetPos('${pos}')">${pos === 'ALL' ? 'All' : pos}</button>`).join('');
+  const dhqCol = v => v >= 7000 ? 'var(--green)' : v >= 4000 ? 'var(--accent)' : v >= 2000 ? 'var(--text2)' : 'var(--text3)';
+  const rows = filtered.slice(0, 80).map(p => ({ kicker: p.pos, label: p.name + (p.isMe ? ' ·' : ''), detail: p.team + (p.age ? ' · ' + p.age : '') + ' · ' + p.owner, value: Math.round(p.dhq).toLocaleString(), color: dhqCol(p.dhq) }));
+  return `<div class="an-segctl">${filterChips}</div>` + _anSection('All Players', filtered.length + ' players · by DHQ' + (filtered.length > 80 ? ' (top 80)' : ''), _anDataStack(rows));
+}
+function _anRenderAssetPicks(ctx) {
+  const S = _anS();
+  const pbo = ctx.picksByOwner || (typeof window.buildPicksByOwner === 'function' ? window.buildPicksByOwner(S.rosters, _anLeague(), S.tradedPicks) : {});
+  const teams = ctx.all.length || (S.rosters || []).length || 12;
+  const PV = window.App?.PlayerValue;
+  const pv = (y, rd) => (PV && PV.getPickValue) ? (PV.getPickValue(y, rd, teams) || 0) : 0;
+  const leaders = (S.rosters || []).map(r => ({ rid: r.roster_id, name: _anOwnerName(r.roster_id), n: (pbo[r.roster_id] || []).length, val: (pbo[r.roster_id] || []).reduce((s, p) => s + pv(p.year, p.round), 0) })).sort((a, b) => b.val - a.val).slice(0, 4);
+  const leaderGrid = _anProofGrid(leaders.map(l => ({ label: l.name, value: Math.round(l.val).toLocaleString(), tone: l.rid === ctx.myRid ? 'good' : 'neutral', detail: l.n + ' pick' + (l.n === 1 ? '' : 's') })));
+  const mine = (pbo[ctx.myRid] || []).slice().sort((a, b) => (a.year - b.year) || (a.round - b.round));
+  const byYear = {}; mine.forEach(p => { (byYear[p.year] = byYear[p.year] || []).push(p); });
+  const yearSections = Object.keys(byYear).sort().map(y => _anSection(y + ' Picks', byYear[y].length + ' pick' + (byYear[y].length === 1 ? '' : 's'),
+    _anDataStack(byYear[y].map(p => ({ kicker: 'R' + p.round, label: p.year + ' Round ' + p.round, detail: p.originalOwnerRid === ctx.myRid ? 'your pick' : 'via ' + _anOwnerName(p.originalOwnerRid), value: Math.round(pv(p.year, p.round)).toLocaleString() + ' DHQ' })))) ).join('');
+  return _anSection('Pick Capital Leaders', 'top draft-capital teams', leaderGrid) + (yearSections || _anSection('Your Picks', '', '<p class="an-sub" style="padding:6px 2px">No future picks on the books.</p>'));
+}
+function _anAssetsTab(d, ctx) {
+  const toggle = `<div class="an-segctl">
+    <button class="an-seg${_anAssetsView === 'players' ? ' active' : ''}" onclick="_anSetAssetsView('players')">All Players</button>
+    <button class="an-seg${_anAssetsView === 'picks' ? ' active' : ''}" onclick="_anSetAssetsView('picks')">Draft Picks</button>
+  </div>`;
+  return toggle + (_anAssetsView === 'picks' ? _anRenderAssetPicks(ctx) : _anRenderAssetPlayers(ctx));
+}
+
+// ── Custom Reports sub-tab (lean presets) ───────────────────────────
+const _AN_PRESETS = [
+  { id: 'roster-audit', name: 'Roster Audit', desc: 'Your weak rooms + the gaps vs winners.' },
+  { id: 'trade-targets', name: 'Trade Targets', desc: "Best players you don't own (DHQ 3,000+)." },
+  { id: 'draft-plan', name: 'Draft Plan', desc: 'Your pick capital, by year.' },
+  { id: 'power-read', name: 'League Power Read', desc: 'Every team, ranked by roster strength.' },
+];
+let _anActivePreset = null;
+function _anRunPreset(id) { _anActivePreset = id; renderAnalyticsPanel(); }
+window._anRunPreset = _anRunPreset;
+function _anRunPresetReport(id, d, ctx) {
+  const me = ctx.me, S = _anS();
+  if (id === 'roster-audit') {
+    const needs = (me.needs || []).map(n => typeof n === 'string' ? n : n.pos).filter(Boolean);
+    const gaps = (d && d.roster && d.roster.gaps) || (d && d.gaps) || [];
+    const rows = [{ kicker: 'Needs', label: needs.length ? needs.join(', ') : 'Stable', detail: 'positions short of a starter', value: String(needs.length) }]
+      .concat(gaps.slice(0, 5).map(g => ({ kicker: (g.priority || '').toUpperCase(), label: g.action, detail: 'vs the league winners', value: '' })));
+    return _anSection('Roster Audit', 'your weak rooms + champion gaps', _anDataStack(rows));
+  }
+  if (id === 'trade-targets') {
+    const mine = new Set((_anRoster(ctx.myRid)?.players) || []);
+    const players = S.players || {}; const normPos = window.App?.normPos || (p => p);
+    const pool = [];
+    (S.rosters || []).forEach(r => { if (r.roster_id === ctx.myRid) return; (r.players || []).forEach(pid => { if (mine.has(pid)) return; const v = _anVal(pid); if (v < 3000) return; const p = players[pid]; pool.push({ name: p?.full_name || ('Player ' + pid), pos: normPos(p?.position || '') || '?', owner: _anOwnerName(r.roster_id), dhq: v }); }); });
+    pool.sort((a, b) => b.dhq - a.dhq);
+    return _anSection('Trade Targets', "best players you don't own", _anDataStack(pool.slice(0, 8).map(p => ({ kicker: p.pos, label: p.name, detail: 'owned by ' + p.owner, value: Math.round(p.dhq).toLocaleString(), color: 'var(--accent)' }))));
+  }
+  if (id === 'draft-plan') {
+    const teams = ctx.all.length; const PV = window.App?.PlayerValue;
+    const byYear = {}; (ctx.myPicks || []).forEach(p => { (byYear[p.year] = byYear[p.year] || []).push(p); });
+    const rows = Object.keys(byYear).sort().map(y => ({ kicker: 'Year', label: y, detail: byYear[y].map(p => 'R' + p.round).join(', '), value: Math.round(byYear[y].reduce((s, p) => s + ((PV && PV.getPickValue) ? PV.getPickValue(p.year, p.round, teams) : 0), 0)).toLocaleString() + ' DHQ' }));
+    return _anSection('Draft Plan', 'your pick capital by year', _anDataStack(rows.length ? rows : [{ label: 'No future picks on the books', value: '—' }]));
+  }
+  if (id === 'power-read') {
+    const ranked = [...ctx.all].sort((a, b) => (b.healthScore || 0) - (a.healthScore || 0));
+    return _anSection('League Power Read', 'every team by roster strength', _anDataStack(ranked.map((a, i) => ({ kicker: '#' + (i + 1), label: _anOwnerName(a.rosterId) + (a.rosterId === ctx.myRid ? ' · you' : ''), detail: a.tier || '', value: String(a.healthScore || 0), color: a.tierColor }))));
+  }
+  return '';
+}
+function _anReportsTab(d, ctx) {
+  const cards = _AN_PRESETS.map(p => `<button class="analytics-report-card${_anActivePreset === p.id ? ' is-active' : ''}" onclick="_anRunPreset('${p.id}')"><span>Report</span><strong>${_anEsc(p.name)}</strong><em>${_anEsc(p.desc)}</em></button>`).join('');
+  let result = '';
+  if (_anActivePreset) { try { result = _anRunPresetReport(_anActivePreset, d, ctx) || ''; } catch (e) { result = ''; } }
+  return `<div class="analytics-report-grid">${cards}</div>` + result;
+}
+
 const _AN_SUBTABS = [
   { key: 'roster', label: 'Roster', render: _anRosterTab },
   { key: 'draft', label: 'Draft', render: _anDraftTab },
   { key: 'trades', label: 'Market Moves', render: _anTradesTab },
+  { key: 'assets', label: 'Players & Picks', render: _anAssetsTab },
+  { key: 'reports', label: 'Reports', render: _anReportsTab },
 ];
 
 function renderAnalyticsPanel() {

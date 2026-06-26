@@ -1370,6 +1370,17 @@ function renderWarRoomBrief() {
   const _wcTone = t => t === 'up' ? 'var(--green)' : t === 'down' ? 'var(--red)' : t === 'warn' ? 'var(--amber)' : 'var(--text3)';
   // Depth gate: free keeps the top insight per brief section; paid unlocks the full stack.
   const _briefGated = typeof canAccess === 'function' && !canAccess(window.FEATURES?.BRIEFING_REASONING || 'briefing_reasoning');
+  // iPad-landscape instrument rail — compact KPI chips beside the brief (CSS-hidden on phone).
+  const _railAll = (typeof window.assessAllTeamsFromGlobal === 'function') ? (window.assessAllTeamsFromGlobal() || []) : [];
+  const _railRank = (_railAll.length && roster) ? ([..._railAll].sort((a, b) => (b.healthScore || 0) - (a.healthScore || 0)).findIndex(a => a.rosterId === roster.roster_id) + 1) : null;
+  const _railElite = (window.App?.countElitePlayers || (() => 0))(roster?.players || []);
+  const _railTxn = Array.isArray(S.transactions) ? S.transactions.length : Object.keys(S.transactions || {}).length;
+  const _railHtml = (roster && _railRank) ? `<section class="scout-instrument-rail">
+      <div class="rail-chip"><span class="rail-kicker">Power Rank</span><strong class="rail-big">#${_railRank}<small>/${_railAll.length}</small></strong><em class="rail-detail">by roster strength</em></div>
+      <div class="rail-chip"><span class="rail-kicker">Roster Pulse</span><strong class="rail-big">${health == null ? '—' : health}</strong><em class="rail-detail">${_esc(assessment?.tier || '—')} · ${_railElite} elite</em></div>
+      <div class="rail-chip"><span class="rail-kicker">Window</span><strong class="rail-big" style="font-size:1.05rem">${_esc((_briefGated ? null : assessment?.window) || assessment?.tier || '—')}</strong><em class="rail-detail">${_briefGated ? 'tier read' : 'strategic window'}</em></div>
+      <div class="rail-chip"><span class="rail-kicker">Activity</span><strong class="rail-big">${_railTxn}</strong><em class="rail-detail">recent moves</em></div>
+    </section>` : '';
   const _wcAll = _whatChanged ? _whatChanged.changes : [];
   const _wcChanges = _briefGated ? _wcAll.slice(0, 1) : _wcAll;
   const _whatChangedHtml = _wcChanges.length ? `<section class="scout-brief-section">
@@ -1439,6 +1450,8 @@ function renderWarRoomBrief() {
         ${diagnosis.line2 && !_briefGated ? `<p>${_esc(diagnosis.line2)}</p>` : ''}
       </div>
     </section>
+
+    ${_railHtml}
 
     ${_whatChangedHtml}
 
