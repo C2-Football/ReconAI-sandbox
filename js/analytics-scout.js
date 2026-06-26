@@ -300,7 +300,34 @@ function _anTradesTab(d, ctx) {
     recent = _anReadout('Your Recent Trade Performance', 'Best & worst · last ' + Math.min(5, last5.length) + ' deals', '<div class="an-list">' + inner + '</div>');
   }
 
-  return cmd + proof + waiverEcon + clock + flow + recent;
+  // Leverage Board — who is DESPERATE, not just who fits. Buyers = contending
+  // teams with the oldest DHQ-weighted cores (they overpay for win-now help);
+  // sellers = rebuilders hoarding picks (they move vets for futures).
+  let leverageBoard = '';
+  {
+    const players = _anS().players || {};
+    const withAge = (ctx.all || []).filter(a => a.rosterId !== ctx.myRid).map(a => {
+      const roster = _anRoster(a.rosterId);
+      let dhqSum = 0, ageSum = 0;
+      (roster?.players || []).forEach(pid => {
+        const dhq = _anVal(pid) || 0;
+        const age = players[pid]?.age;
+        if (dhq > 0 && Number.isFinite(age)) { dhqSum += dhq; ageSum += age * dhq; }
+      });
+      const picks = a.picksAssessment?.totalPicks ?? ((ctx.picksByOwner?.[a.rosterId] || []).length || null);
+      return { rosterId: a.rosterId, name: _anOwnerName(a.rosterId), wAge: dhqSum > 0 ? ageSum / dhqSum : 0, picks, window: a.window, healthScore: a.healthScore || 0 };
+    });
+    const buyers = withAge.filter(a => a.window === 'CONTENDING' && a.wAge > 0).sort((x, y) => y.wAge - x.wAge).slice(0, 3);
+    const sellers = withAge.filter(a => a.window === 'REBUILDING').sort((x, y) => ((y.picks || 0) - (x.picks || 0)) || (x.healthScore - y.healthScore)).slice(0, 3);
+    if (buyers.length || sellers.length) {
+      const buyRows = buyers.map(b => ({ kicker: 'Buyer', label: b.name, detail: 'oldest contending core — overpays for win-now', value: 'age ' + b.wAge.toFixed(1), color: 'var(--amber)' }));
+      const sellRows = sellers.map(s => ({ kicker: 'Seller', label: s.name, detail: 'rebuilding — moves vets for futures', value: Number.isFinite(s.picks) ? s.picks + ' pick' + (s.picks === 1 ? '' : 's') : 'sells vets', color: 'var(--accent)' }));
+      const body = (buyers.length ? _anDataStack(buyRows) : '') + (sellers.length ? _anDataStack(sellRows) : '');
+      leverageBoard = _anSection('Leverage Board', 'who is desperate — buyers vs sellers', body);
+    }
+  }
+
+  return cmd + proof + waiverEcon + leverageBoard + clock + flow + recent;
 }
 
 // ── Players & Picks sub-tab ─────────────────────────────────────────
@@ -399,8 +426,106 @@ function _anReportsTab(d, ctx) {
   return `<div class="analytics-report-grid">${cards}</div>` + result;
 }
 
+// ── Window Forecast sub-tab ─────────────────────────────────────────
+// Port of warroom/js/widgets/window-forecast.js: projects each position
+// group's DHQ-weighted share still inside its peak window over the next
+// 4 seasons and flags the season ("cliff") the core's value falls off.
+const _AN_WF_POS = ['QB', 'RB', 'WR', 'TE', 'K', 'DL', 'LB', 'DB'];
+const _AN_WF_HORIZON = 4;
+function computeWindowForecast(myRid, rosters, playersData, league) {
+  const season = parseInt(league && league.season, 10) || new Date().getFullYear();
+  const roster = (rosters || []).find(r => r.roster_id === myRid);
+  if (!roster) return { groups: [], season };
+  const normPos = window.App?.normPos || (p => p);
+  const groups = {};
+  (roster.players || []).forEach(pid => {
+    const p = playersData?.[pid];
+    if (!p) return;
+    const pos = normPos(p.position);
+    if (!_AN_WF_POS.includes(pos)) return;
+    const dhq = _anVal(pid) || 0;
+    if (dhq <= 0) return;
+    const rawAge = p.age || (p.birth_date ? Math.floor((Date.now() - new Date(p.birth_date).getTime()) / 31557600000) : null);
+    if (!Number.isFinite(rawAge)) return;
+    (groups[pos] = groups[pos] || []).push({ pid, name: p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim() || ('Player ' + pid), age: rawAge, dhq, team: p.team || '' });
+  });
+  const out = _AN_WF_POS.filter(pos => groups[pos] && groups[pos].length).map(pos => {
+    const curve = window.App?.ageCurveWindows?.[pos] || { build: [22, 24], peak: window.App?.peakWindows?.[pos] || [24, 29], decline: [30, 32] };
+    const peakEnd = curve.peak?.[1] || 29;
+    const declineEnd = curve.decline?.[1] || peakEnd + 3;
+    const players = groups[pos].sort((a, b) => b.dhq - a.dhq);
+    const totalDhq = players.reduce((s, p) => s + p.dhq, 0);
+    const primeShares = [];
+    for (let t = 0; t < _AN_WF_HORIZON; t++) {
+      const prime = players.reduce((s, p) => s + ((p.age + t) <= peakEnd ? p.dhq : 0), 0);
+      primeShares.push(totalDhq > 0 ? prime / totalDhq : 0);
+    }
+    let cliffT = -1;
+    for (let t = 0; t < _AN_WF_HORIZON; t++) { if (primeShares[t] < 0.5) { cliffT = t; break; } }
+    const wAge = totalDhq > 0 ? players.reduce((s, p) => s + p.age * p.dhq, 0) / totalDhq : 0;
+    const sellBy = players.filter(p => p.age >= peakEnd - 1 && p.age <= declineEnd && p.dhq >= 2000);
+    return { pos, players, totalDhq, primeShares, cliffT, wAge, peakEnd, declineEnd, sellBy };
+  }).sort((a, b) => {
+    const at = a.cliffT === -1 ? _AN_WF_HORIZON : a.cliffT;
+    const bt = b.cliffT === -1 ? _AN_WF_HORIZON : b.cliffT;
+    return at !== bt ? at - bt : b.totalDhq - a.totalDhq;
+  });
+  return { groups: out, season };
+}
+function _anWindowTab(d, ctx) {
+  const fc = computeWindowForecast(ctx.myRid, _anS().rosters, _anS().players, _anLeague());
+  const groups = fc.groups, season = fc.season, horizon = _AN_WF_HORIZON;
+  if (!groups.length) {
+    return _anSection('Window Forecast', '', '<p class="an-sub" style="padding:6px 2px">No age data yet — sync your roster to project your contention window.</p>');
+  }
+  const shareCol = s => s >= 0.65 ? 'var(--green)' : s >= 0.4 ? 'var(--accent)' : s >= 0.2 ? 'var(--amber)' : 'var(--red)';
+  const cliffCol = g => g.cliffT === -1 ? 'var(--green)' : g.cliffT === 0 ? 'var(--red)' : g.cliffT === 1 ? 'var(--amber)' : 'var(--accent)';
+  const cliffLabel = g => g.cliffT === -1 ? (season + horizon) + '+' : g.cliffT === 0 ? 'NOW' : String(season + g.cliffT);
+  const nearest = groups.find(g => g.cliffT >= 0);
+  const sellByAll = groups.flatMap(g => g.sellBy.map(p => ({ ...p, pos: g.pos, peakEnd: g.peakEnd }))).sort((a, b) => b.dhq - a.dhq);
+  const coreAge = (() => { let dd = 0, aa = 0; groups.forEach(g => { dd += g.totalDhq; aa += g.wAge * g.totalDhq; }); return dd > 0 ? aa / dd : 0; })();
+
+  const cmd = _anCommandPanel({
+    title: 'When does your core age out?',
+    thesis: 'Each room’s DHQ-weighted share still inside its peak window over the next ' + horizon + ' seasons — and the season your value falls off a cliff.',
+    mode: _anModeFromGm(),
+    note: 'Prime share = % of a room’s DHQ held by players still inside their position’s peak age band. Cliff = first season prime share drops below 50%.',
+    stats: [
+      { label: 'Nearest Cliff', value: nearest ? (nearest.pos + ' · ' + cliffLabel(nearest)) : 'None in view', color: nearest ? cliffCol(nearest) : 'var(--green)' },
+      { label: 'Weighted Core Age', value: coreAge ? coreAge.toFixed(1) : '—' },
+      { label: 'Rooms Tracked', value: String(groups.length) },
+      { label: 'Sell-By Candidates', value: String(sellByAll.length), color: sellByAll.length ? 'var(--amber)' : 'var(--green)' },
+    ],
+  });
+
+  const axis = `<div class="an-wf-axis"><span class="an-wf-pos"></span><div class="an-wf-bars">${Array.from({ length: horizon }, (_, t) => `<span>${String(season + t).slice(-2)}</span>`).join('')}</div><span class="an-wf-cliff">cliff</span></div>`;
+  const lifelines = groups.map(g => {
+    const bars = g.primeShares.map((s, t) => `<i title="${season + t}: ${Math.round(s * 100)}% of ${_anEsc(g.pos)} value in prime" style="background:${shareCol(s)};opacity:${s >= 0.2 ? 1 : 0.45}"></i>`).join('');
+    return `<div class="an-wf-row"><span class="an-wf-pos">${_anEsc(g.pos)}</span><div class="an-wf-bars">${bars}</div><span class="an-wf-cliff" style="color:${cliffCol(g)}">${_anEsc(cliffLabel(g))}</span></div>`;
+  }).join('');
+  const agingWindow = _anSection('Aging Window', 'prime-share decay by season', axis + lifelines);
+
+  const sells = sellByAll.slice(0, 6);
+  const sellBy = sells.length ? _anSection('Sell-By Candidates', 'high-DHQ players exiting their prime', _anDataStack(sells.map(p => {
+    const yrsPast = p.age - p.peakEnd;
+    const note = yrsPast >= 1 ? 'past peak' : yrsPast === 0 ? 'final prime year' : 'prime ends next yr';
+    return { kicker: p.pos, label: p.name, detail: 'age ' + p.age + (p.team ? ' · ' + p.team : '') + ' · ' + note, value: Math.round(p.dhq).toLocaleString(), color: p.dhq >= 5000 ? 'var(--green)' : 'var(--accent)' };
+  }))) : _anSection('Sell-By Candidates', '', '<p class="an-sub" style="padding:6px 2px">Nobody is aging out of their prime — your core is young.</p>');
+
+  const tableRows = groups.map(g => ({ kicker: g.pos, label: g.pos + ' prime share', detail: g.primeShares.map((s, t) => String(season + t).slice(-2) + ': ' + Math.round(s * 100) + '%').join(' · '), value: '~' + g.wAge.toFixed(1) + ' yr' }));
+  const table = _anSection('Prime Share by Season', '% of room value in peak window · weighted age', _anDataStack(tableRows));
+
+  const action = nearest
+    ? `<strong style="color:var(--amber)">${_anEsc(nearest.pos)}</strong> is your first cliff (${_anEsc(cliffLabel(nearest))}). ${sellByAll.length ? 'Move ' + _anEsc(sellByAll[0].name) + ' while contenders still pay prime prices.' : 'Start sourcing younger ' + _anEsc(nearest.pos) + ' depth now.'}`
+    : `Your core stays in its prime through ${season + horizon - 1} — extend the window by flipping aging depth for picks.`;
+  const note = `<div class="analytics-panel"><div class="an-wf-action">${action}</div></div>`;
+
+  return cmd + agingWindow + sellBy + table + note;
+}
+
 const _AN_SUBTABS = [
   { key: 'roster', label: 'Roster', render: _anRosterTab },
+  { key: 'window', label: 'Window', render: _anWindowTab },
   { key: 'draft', label: 'Draft', render: _anDraftTab },
   { key: 'trades', label: 'Market Moves', render: _anTradesTab },
   { key: 'assets', label: 'Players & Picks', render: _anAssetsTab },
@@ -458,7 +583,7 @@ function renderAnalyticsPanel() {
   const winnerN = (la && Array.isArray(la.winners)) ? la.winners.length : 0;
   const winnerSource = (la && (la.winnerSource || la.source)) || 'standings';
 
-  const ctx = { all, me, myRid, rank, myDhq, myElite, myPicks, myPickVal, myPickCount, pickRank, leaguePickVal, winnerN, winnerSource };
+  const ctx = { all, me, myRid, rank, myDhq, myElite, myPicks, myPickVal, myPickCount, pickRank, leaguePickVal, winnerN, winnerSource, picksByOwner };
 
   const active = _AN_SUBTABS.find(t => t.key === _anTab) || _AN_SUBTABS[0];
   const nav = _AN_SUBTABS.map(t => `<button class="${t.key === active.key ? 'is-active' : ''}" onclick="_anSetTab('${t.key}')">${_anEsc(t.label)}</button>`).join('');

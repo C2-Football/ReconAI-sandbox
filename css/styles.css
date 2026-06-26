@@ -2784,6 +2784,15 @@ input,textarea,select,[contenteditable="true"]{
 .analytics-report-card span{display:block;color:var(--accent);font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em}
 .analytics-report-card strong{display:block;color:var(--text);font-size:.96rem;margin:4px 0 3px}
 .analytics-report-card em{display:block;color:var(--text3);font-style:normal;font-size:.7rem;line-height:1.35}
+/* Window Forecast — position lifelines */
+.an-wf-axis,.an-wf-row{display:flex;align-items:center;gap:8px;padding:3px 2px}
+.an-wf-axis{padding-bottom:5px;opacity:.65}
+.an-wf-axis .an-wf-bars span{flex:1;text-align:center;font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--text3)}
+.an-wf-pos{width:32px;flex-shrink:0;font-size:.7rem;font-weight:700;color:var(--text2)}
+.an-wf-bars{display:flex;gap:3px;flex:1;min-width:0}
+.an-wf-bars i{flex:1;height:12px;border-radius:2px;min-width:0;display:block}
+.an-wf-cliff{min-width:44px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:700;color:var(--text3)}
+.an-wf-action{padding:11px 13px;font-size:.82rem;line-height:1.55;color:var(--text2)}
 @media(max-width:1100px){
   .analytics-report-grid{grid-template-columns:1fr 1fr}
   .analytics-proof-grid{grid-template-columns:1fr 1fr}
