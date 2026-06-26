@@ -315,6 +315,7 @@ function _rosterTag(pid,tag){
   try{localStorage.setItem('player_tags_'+lid,JSON.stringify(tags));}catch(e){/* ignore */}
   if(window.OD&&window.OD.savePlayerTags)window.OD.savePlayerTags(lid,tags);
   buildRosterTable();
+  if(typeof window.refreshTaggedSetsDisplay==='function')window.refreshTaggedSetsDisplay();
 }
 window._rosterTag=_rosterTag;
 function _rosterToggle(pid){_rosterExpanded=_rosterExpanded===pid?null:pid;buildRosterTable();}

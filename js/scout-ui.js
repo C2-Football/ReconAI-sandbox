@@ -1693,6 +1693,8 @@ function renderTeamCommandPanel() {
       </div>
     </details>
 
+    <div id="scout-tagged-sets-host"></div>
+
     <div class="scout-roster-bar">
       <div class="rfbtn-row" id="team-roster-filters">
         ${[['all', 'All'], ['OFF', 'Offense'], ['IDP', 'IDP'], ['taxi', 'Taxi']].map(([k, l]) =>
@@ -1707,6 +1709,7 @@ function renderTeamCommandPanel() {
   // Mount the shared roster-card renderer inline (the roster is the page now).
   if (typeof window.setRosterHost === 'function') window.setRosterHost('team-roster-host');
   if (typeof window.buildRosterTable === 'function') window.buildRosterTable();
+  if (typeof window.renderTaggedSets === 'function') window.renderTaggedSets('scout-tagged-sets-host');
 }
 window.renderTeamCommandPanel = renderTeamCommandPanel;
 
@@ -1724,7 +1727,7 @@ function renderToolsPanel() {
     { key: 'waivers', title: 'Waiver Workbench', sub: 'Find add/drop upgrades, bid ranges, fresh drops, and market pressure.', metric: typeof getFAAB === 'function' ? (_scoutFaab(roster)?.isFAAB ? '$' + _scoutFaab(roster).remaining + ' FAAB' : 'Claims') : 'Adds', action: "mobileTab('waivers')" },
     { key: 'draft', title: 'Dynamic Mock Draft', sub: 'Mock by owner tendencies, history, pick values, and trade-up/down paths.', metric: 'Mock room', action: "openDynamicMockDraft()" },
     { key: 'board', title: 'Rookie Big Board', sub: 'Manage tiers, flags, needs, and rookie targets for draft day.', metric: 'Board', action: "openRookieBigBoard()" },
-    { key: 'lineup', title: 'Start/Sit Lab', sub: 'Weekly lineup decisions with projection, role, and risk context.', metric: 'Coming Soon', action: '', soon: true },
+    { key: 'lineup', title: 'Start/Sit Lab', sub: 'Weekly lineup decisions with projection, role, and risk context.', metric: 'This week', action: "mobileTab('startsit')" },
     { key: 'league', title: 'League Intel', sub: 'Owner profiles, tendencies, market leverage, and team dossiers.', metric: `${(S.rosters || []).length || 0} teams`, action: "mobileTab('league')" },
     { key: 'calendar', title: 'League Calendar', sub: 'Draft, trade deadline, playoffs, waivers, and your own custom dates.', metric: 'Key dates', action: "mobileTab('calendar')" },
     { key: 'history', title: 'League History', sub: 'Champions timeline, all-time standings, and career records.', metric: 'All-time', action: "mobileTab('history')" },
