@@ -50,6 +50,10 @@ function _tcBuildCtx(S, roster, league, phase, assessment) {
     windowForecast: _tcSafe(() => window.computeWindowForecast ? window.computeWindowForecast(myRid, S.rosters, S.players, league) : null),
     posGrades: _tcSafe(() => window._anCalcPosGrades ? window._anCalcPosGrades(myRid, S.rosters, S.players) : null),
     picksByOwner: _tcSafe(() => window.buildPicksByOwner ? window.buildPicksByOwner(S.rosters, league, S.tradedPicks) : null) || {},
+    // Heavier engines — computed once here, never inside a card's relevance().
+    analytics: _tcSafe(() => window.runLeagueAnalytics ? window.runLeagueAnalytics() : null),
+    leverage: _tcSafe(() => window.computeLeverageBoard ? window.computeLeverageBoard(myRid) : null),
+    optimalLineup: (phaseStr === 'regular_season' || phaseStr === 'playoffs') ? _tcSafe(() => window._buildLineupState ? window._buildLineupState() : null) : null,
     tagCounts, tagTotal: tagCounts.trade + tagCounts.cut + tagCounts.watch + tagCounts.untouchable,
   };
 }
@@ -169,12 +173,95 @@ const _TC_CATALOG = [
       return _tcCard({ kicker: 'Your Tags', title: ctx.tagTotal + ' tagged', rows: rows.slice(0, 3) });
     },
   },
+  {
+    key: 'gap-plan', title: 'Gap Plan', tieClass: 2,
+    relevance(ctx) {
+      const gaps = ctx.analytics?.roster?.gaps || ctx.analytics?.gaps;
+      if (!gaps || !gaps.length) return 0;
+      const sev = String(gaps[0].priority || gaps[0].severity || '').toLowerCase();
+      let s = 18 + (ctx.panic || 0) * 6;
+      if (sev === 'critical') s += 25;
+      if (ctx.window === 'REBUILDING') s += 12;
+      if (ctx.phase === 'pre_draft' || ctx.phase === 'draft_week') s += 10;
+      return Math.min(100, s);
+    },
+    render(ctx) {
+      const gaps = ctx.analytics?.roster?.gaps || ctx.analytics?.gaps || [];
+      const top = gaps[0]; if (!top) return '';
+      const area = top.area || top.label || top.pos || 'roster';
+      const sev = String(top.priority || top.severity || 'medium');
+      const sevCol = /crit/i.test(sev) ? 'var(--red)' : /high/i.test(sev) ? 'var(--amber)' : 'var(--text2)';
+      const gapN = Math.abs(Number(top.dhqGap ?? top.delta ?? 0));
+      return _tcCard({ kicker: 'Gap Plan', title: 'Close the ' + area + ' gap', rows: [
+        { label: 'Behind champions', value: gapN ? Math.round(gapN).toLocaleString() + ' ' + (top.unit || 'DHQ') : '—' },
+        { label: 'Priority', value: sev.toUpperCase(), color: sevCol },
+      ] });
+    },
+  },
+  {
+    key: 'rebuild-timeline', title: 'Rebuild Timeline', tieClass: 3,
+    relevance(ctx) {
+      if (ctx.window !== 'REBUILDING') return 0;
+      const proj = ctx.analytics?.projection; if (!proj || !proj.length) return 0;
+      const yrs = (ctx.analytics?.window?.years != null) ? ctx.analytics.window.years : 5;
+      return 20 + (5 - Math.min(5, yrs)) * 8 + (yrs < 2 ? 20 : 0);
+    },
+    render(ctx) {
+      const proj = ctx.analytics?.projection || [], win = ctx.analytics?.window || {};
+      const contend = [...proj].reverse().find(p => /CONTEND|ELITE|PLAYOFF/i.test(p.tier || ''));
+      const title = contend ? ('Contends by ' + contend.year) : 'Multi-year rebuild';
+      const peak = contend ? contend.tier : (proj[proj.length - 1]?.tier || '—');
+      return _tcCard({ kicker: 'Rebuild Timeline', title, rows: [
+        { label: 'Window', value: win.label || ((win.years || 0) + ' yr left') },
+        { label: 'Projected peak', value: peak },
+      ] });
+    },
+  },
+  {
+    key: 'trade-performance', title: 'Trade Edge', tieClass: 4,
+    relevance(ctx) {
+      const tp = ctx.analytics?.trades?.myTradeProfile;
+      if (!tp || (tp.totalTrades || 0) < 3) return 0;
+      return Math.max(0, 15 + ((tp.tradeWinRate || 0.5) - 0.5) * 50 + ((tp.avgValueGained || 0) > 0 ? 15 : 0));
+    },
+    render(ctx) {
+      const tp = ctx.analytics?.trades?.myTradeProfile || {};
+      const wr = tp.tradeWinRate || 0, avg = tp.avgValueGained || 0;
+      return _tcCard({ kicker: 'Trade Edge', title: (tp.tradesWon || 0) + '-' + (tp.tradesFair || 0) + '-' + (tp.tradesLost || 0) + ' record', rows: [
+        { label: 'Win rate', value: Math.round(wr * 100) + '%', color: wr >= 0.55 ? 'var(--green)' : wr >= 0.4 ? 'var(--amber)' : 'var(--red)' },
+        { label: 'Avg value / deal', value: (avg > 0 ? '+' : '') + Math.round(avg).toLocaleString() + ' DHQ', color: avg >= 0 ? 'var(--green)' : 'var(--red)' },
+      ] });
+    },
+  },
+  {
+    key: 'leverage-board', title: 'Leverage Board', tieClass: 3,
+    relevance(ctx) {
+      const lev = ctx.leverage;
+      if (!lev || !lev.hasValue || (!lev.buyers.length && !lev.sellers.length)) return 0;
+      let s = 12;
+      if (ctx.window === 'CONTENDING' && lev.buyers.length) s += 20;
+      if (ctx.window === 'REBUILDING' && lev.sellers.length) s += 15;
+      if (/offseason|post_draft|pre_draft/.test(ctx.phase)) s += 10;
+      return s;
+    },
+    render(ctx) {
+      const lev = ctx.leverage || { buyers: [], sellers: [] }, rows = [];
+      lev.buyers.slice(0, 2).forEach(b => rows.push({ label: 'Buyer · ' + b.name, value: 'core age ' + b.wAge.toFixed(1), color: 'var(--amber)' }));
+      lev.sellers.slice(0, 2).forEach(s => rows.push({ label: 'Seller · ' + s.name, value: Number.isFinite(s.picks) ? s.picks + ' picks' : 'sells vets', color: 'var(--accent)' }));
+      return _tcCard({ kicker: 'Leverage Board', title: 'Who is desperate', rows: rows.slice(0, 3) });
+    },
+  },
 ];
 
 // ── Selector ────────────────────────────────────────────────────────
+// Brief-nudge: the AI/brief can boost specific card keys (additive over the
+// rules baseline — never gates). seasonOnly cards are hard-filtered out of
+// season so a nudge can't lift them past the floor.
+let _tcNudge = new Set();
 function _tcSelect(ctx, n) {
   return _TC_CATALOG
-    .map((c, i) => ({ c, i, score: _tcSafe(() => c.relevance(ctx)) || 0 }))
+    .filter(c => !(c.seasonOnly && !ctx.inSeason))
+    .map((c, i) => ({ c, i, score: (_tcSafe(() => c.relevance(ctx)) || 0) + (_tcNudge.has(c.key) ? 25 : 0) }))
     .filter(x => x.score >= 20)
     .sort((a, b) => (b.score - a.score) || ((a.c.tieClass || 5) - (b.c.tieClass || 5)) || (a.i - b.i))
     .slice(0, n)
@@ -190,8 +277,36 @@ function _tcRenderPanel(ctx) {
   return body ? `<section class="scout-adaptive-rail">${body}</section>` : '';
 }
 
+// ── AI layer ────────────────────────────────────────────────────────
+// Chat-summon: map a user phrase to a card key so the chat can render any
+// catalog card inline ("show me my draft capital").
+const _TC_ALIASES = [
+  ['draft-capital', ['draft capital', 'my picks', 'pick capital', 'draft pick']],
+  ['leverage-board', ['leverage', 'who is buying', 'who is selling', 'buyers and sellers', 'trade partner']],
+  ['gap-plan', ['gap plan', 'my gaps', 'close the gap', 'behind champ', 'champion gap']],
+  ['power-rankings', ['power rank', 'my rank', 'league rank', 'standings']],
+  ['coverage-grades', ['coverage', 'position grade', 'room grade', 'weakest room']],
+  ['window-cliff', ['window cliff', 'age window', 'my window', 'age cliff', 'contention window']],
+  ['roster-pulse', ['roster pulse', 'team health', 'my health', 'roster health']],
+  ['rebuild-timeline', ['rebuild timeline', 'when do i contend', 'rebuild window']],
+  ['trade-performance', ['trade record', 'trade edge', 'my trade history', 'trade performance']],
+  ['tagged-players', ['my tags', 'tagged player', 'trade block', 'cut candidate', 'watch list']],
+];
+function _tcMatchCardKey(text) {
+  const t = (text || '').toLowerCase();
+  for (const [key, phrases] of _TC_ALIASES) { if (phrases.some(p => t.includes(p))) return key; }
+  return null;
+}
+function _tcRenderCard(key, ctx) {
+  const c = _TC_CATALOG.find(x => x.key === key);
+  return (c && ctx) ? (_tcSafe(() => c.render(ctx)) || '') : '';
+}
+
 window.TodayCards = {
   buildCtx: (S, roster, league, phase, assessment) => _tcSafe(() => _tcBuildCtx(S, roster, league, phase, assessment)),
   renderPanel: ctx => _tcSafe(() => _tcRenderPanel(ctx)) || '',
+  matchCardKey: _tcMatchCardKey,
+  renderCard: (key, ctx) => _tcSafe(() => _tcRenderCard(key, ctx)) || '',
+  setNudge: keys => { _tcNudge = new Set(Array.isArray(keys) ? keys : []); },
   _catalog: _TC_CATALOG,
 };

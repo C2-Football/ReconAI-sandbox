@@ -1381,6 +1381,16 @@ function renderWarRoomBrief() {
       <div class="rail-chip"><span class="rail-kicker">Window</span><strong class="rail-big" style="font-size:1.05rem">${_esc((_briefGated ? null : assessment?.window) || assessment?.tier || '—')}</strong><em class="rail-detail">${_briefGated ? 'tier read' : 'strategic window'}</em></div>
       <div class="rail-chip"><span class="rail-kicker">Activity</span><strong class="rail-big">${_railTxn}</strong><em class="rail-detail">recent moves</em></div>
     </section>` : '';
+  // Brief nudge: let the brief's own read (priorities / next move) boost matching
+  // adaptive cards — additive over the rules baseline, cleared+reset each render.
+  if (window.TodayCards && window.TodayCards.setNudge) {
+    try {
+      const _nudgeTxt = (priorities || []).map(p => typeof p === 'string' ? p : (p.label || p.text || p.title || ''))
+        .concat(nextMove?.action ? [nextMove.action] : [])
+        .concat(diagnosis?.line1 ? [diagnosis.line1] : []);
+      window.TodayCards.setNudge(_nudgeTxt.map(t => window.TodayCards.matchCardKey(t)).filter(Boolean));
+    } catch (e) { /* ignore */ }
+  }
   // Adaptive instrument panel — situation-selected KPI cards (today-cards.js).
   const _adaptiveHtml = (roster && window.TodayCards)
     ? (window.TodayCards.renderPanel(window.TodayCards.buildCtx(S, roster, league, phase, assessment)) || '')

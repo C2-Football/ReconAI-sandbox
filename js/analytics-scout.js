@@ -305,27 +305,11 @@ function _anTradesTab(d, ctx) {
   // sellers = rebuilders hoarding picks (they move vets for futures).
   let leverageBoard = '';
   {
-    const players = _anS().players || {};
-    const withAge = (ctx.all || []).filter(a => a.rosterId !== ctx.myRid).map(a => {
-      const roster = _anRoster(a.rosterId);
-      let dhqSum = 0, ageSum = 0;
-      (roster?.players || []).forEach(pid => {
-        const dhq = _anVal(pid) || 0;
-        const age = Number(players[pid]?.age);
-        if (dhq > 0 && Number.isFinite(age) && age > 0) { dhqSum += dhq; ageSum += age * dhq; }
-      });
-      const picks = a.picksAssessment?.totalPicks ?? null;
-      return { rosterId: a.rosterId, name: _anOwnerName(a.rosterId), wAge: dhqSum > 0 ? ageSum / dhqSum : 0, picks, window: a.window, healthScore: a.healthScore || 0 };
-    });
-    // No DHQ signal anywhere (redraft / CTB) → no buy-side read, so skip the
-    // board entirely rather than show a misleading sellers-only half.
-    const hasValue = withAge.some(a => a.wAge > 0);
-    const buyers = withAge.filter(a => a.window === 'CONTENDING' && a.wAge > 0).sort((x, y) => y.wAge - x.wAge).slice(0, 3);
-    const sellers = withAge.filter(a => a.window === 'REBUILDING').sort((x, y) => ((y.picks || 0) - (x.picks || 0)) || (x.healthScore - y.healthScore)).slice(0, 3);
-    if (hasValue && (buyers.length || sellers.length)) {
-      const buyRows = buyers.map(b => ({ kicker: 'Buyer', label: b.name, detail: 'oldest contending core — overpays for win-now', value: 'age ' + b.wAge.toFixed(1), color: 'var(--amber)' }));
-      const sellRows = sellers.map(s => ({ kicker: 'Seller', label: s.name, detail: 'rebuilding — moves vets for futures', value: Number.isFinite(s.picks) ? s.picks + ' pick' + (s.picks === 1 ? '' : 's') : 'sells vets', color: 'var(--accent)' }));
-      const body = (buyers.length ? _anDataStack(buyRows) : '') + (sellers.length ? _anDataStack(sellRows) : '');
+    const lev = (typeof window.computeLeverageBoard === 'function') ? window.computeLeverageBoard(ctx.myRid) : { buyers: [], sellers: [], hasValue: false };
+    if (lev.hasValue && (lev.buyers.length || lev.sellers.length)) {
+      const buyRows = lev.buyers.map(b => ({ kicker: 'Buyer', label: b.name, detail: 'oldest contending core — overpays for win-now', value: 'age ' + b.wAge.toFixed(1), color: 'var(--amber)' }));
+      const sellRows = lev.sellers.map(s => ({ kicker: 'Seller', label: s.name, detail: 'rebuilding — moves vets for futures', value: Number.isFinite(s.picks) ? s.picks + ' pick' + (s.picks === 1 ? '' : 's') : 'sells vets', color: 'var(--accent)' }));
+      const body = (lev.buyers.length ? _anDataStack(buyRows) : '') + (lev.sellers.length ? _anDataStack(sellRows) : '');
       leverageBoard = _anSection('Leverage Board', 'who is desperate — buyers vs sellers', body);
     }
   }
@@ -835,3 +819,25 @@ window.renderAnalyticsPanel = renderAnalyticsPanel;
 // Exposed for the adaptive Today instrument panel (js/today-cards.js).
 window.computeWindowForecast = computeWindowForecast;
 window._anCalcPosGrades = _anCalcPosGrades;
+// Leverage board compute (buyers = oldest contending cores; sellers = pick-hoarding
+// rebuilders) — extracted from _anTradesTab so today-cards + the Trades tab share it.
+function computeLeverageBoard(myRid) {
+  const players = _anS().players || {};
+  const all = (typeof window.assessAllTeamsFromGlobal === 'function') ? (window.assessAllTeamsFromGlobal() || []) : [];
+  const withAge = all.filter(a => a.rosterId !== myRid).map(a => {
+    const roster = _anRoster(a.rosterId);
+    let dhqSum = 0, ageSum = 0;
+    (roster?.players || []).forEach(pid => {
+      const dhq = _anVal(pid) || 0;
+      const age = Number(players[pid]?.age);
+      if (dhq > 0 && Number.isFinite(age) && age > 0) { dhqSum += dhq; ageSum += age * dhq; }
+    });
+    const picks = a.picksAssessment?.totalPicks ?? null;
+    return { rosterId: a.rosterId, name: _anOwnerName(a.rosterId), wAge: dhqSum > 0 ? ageSum / dhqSum : 0, picks, window: a.window, healthScore: a.healthScore || 0 };
+  });
+  const hasValue = withAge.some(a => a.wAge > 0);
+  const buyers = withAge.filter(a => a.window === 'CONTENDING' && a.wAge > 0).sort((x, y) => y.wAge - x.wAge).slice(0, 3);
+  const sellers = withAge.filter(a => a.window === 'REBUILDING').sort((x, y) => ((y.picks || 0) - (x.picks || 0)) || (x.healthScore - y.healthScore)).slice(0, 3);
+  return { buyers, sellers, hasValue };
+}
+window.computeLeverageBoard = computeLeverageBoard;
