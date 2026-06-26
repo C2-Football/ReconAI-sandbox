@@ -390,7 +390,7 @@ function openPlayerModal(playerId){
     let curNotes={};
     try{ curNotes=JSON.parse(localStorage.getItem(noteKey)||'{}'); }catch(e){ curNotes={}; }
     const curNote=curNotes[playerId]||'';
-    tagSec.innerHTML=`<button class="chip" onclick="window.CompareScout&&window.CompareScout.add('${playerId}');closePlayerModal();" style="margin-bottom:10px;font-weight:700">Compare player</button>
+    tagSec.innerHTML=`<button class="chip" onclick="closePlayerModal();window.CompareScout&&window.CompareScout.add('${playerId}');" style="margin-bottom:10px;font-weight:700">Compare player</button>
       <div style="font-size:13px;font-weight:700;color:var(--text3);margin-bottom:4px">TAG</div>
       <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px">${tagOpts.map(t=>{
         const isActive=curTag===t.key;
@@ -653,6 +653,7 @@ function tagPlayer(pid,tag){
   });
   if(typeof showToast==='function')showToast(tags[pid]===tag?'Tagged':'Tag removed');
   if(typeof window.refreshTaggedSetsDisplay==='function')window.refreshTaggedSetsDisplay();
+  if(typeof window.buildRosterTable==='function')window.buildRosterTable(); // refresh the roster row's tag chip (matches _rosterTag)
 }
 window.tagPlayer=tagPlayer;
 

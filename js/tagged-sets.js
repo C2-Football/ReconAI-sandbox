@@ -22,7 +22,9 @@ function getPlayersByTag(tag) {
   const S = window.S || {};
   const tags = window._playerTags || {};
   const my = (typeof window.myR === 'function') ? window.myR() : ((S.rosters || []).find(r => r.roster_id === S.myRosterId) || null);
-  const pool = (my && my.players) ? my.players : Object.keys(tags);
+  // Union of roster + every tagged pid — tags can be set on FAs/rookies/opponents
+  // from the modal, so a roster-only pool would silently drop them.
+  const pool = Array.from(new Set([...((my && my.players) || []), ...Object.keys(tags)]));
   const dv = window.dynastyValue || window.App?.dynastyValue || (() => 0);
   const normPos = window.App?.normPos || (x => x);
   return pool

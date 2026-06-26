@@ -22,7 +22,8 @@ function _cmpPlayer(pid) {
   const normPos = window.App?.normPos || (x => x);
   const pos = normPos((window.pPos ? window.pPos(pid) : p.position) || p.position || '?');
   const age = Number(p.age) || null;
-  const dhq = (window.dynastyValue || window.App?.dynastyValue || (() => 0))(pid) || 0;
+  const dhqRaw = (window.dynastyValue || window.App?.dynastyValue || (() => 0))(pid) || 0;
+  const dhq = dhqRaw > 0 ? dhqRaw : null; // null (not 0) so cold/IDP players don't false-win the DHQ row
   let ros = null;
   try { const PV = window.App?.PlayerValue; if (PV && PV.getValue) { const v = PV.getValue(pid, 'ros'); if (Number.isFinite(+v) && +v > 0) ros = +v; } } catch { /* ignore */ }
   const ps = S.playerStats?.[pid] || {};
@@ -105,6 +106,11 @@ function _cmpRender() {
 function _cmpShow() {
   const host = document.getElementById('compare-scout-panel');
   if (!host) return;
+  // Scout doesn't compute rest-of-season values by default; prime them once so
+  // the ROS row is meaningful in redraft leagues (no-op for dynasty/offseason).
+  try { if (window.App?.PlayerValue?.ensureRos) window.App.PlayerValue.ensureRos(); } catch { /* ignore */ }
+  host.onclick = e => { if (e.target === host) CompareScout.hide(); }; // backdrop tap closes
+  document.body.style.overflow = 'hidden'; // lock scroll behind the sheet (mirror player modal)
   host.setAttribute('aria-hidden', 'false');
   _cmpRender();
   requestAnimationFrame(() => host.classList.add('open'));
@@ -115,7 +121,7 @@ const CompareScout = {
   add(pid) { _cmpLoad(); const s = String(pid); if (s && !_cmpStack.includes(s)) { if (_cmpStack.length >= _CMP_MAX) { if (typeof showToast === 'function') showToast('Compare holds 4 — remove one first'); } else { _cmpStack.push(s); _cmpSave(); } } _cmpShow(); },
   remove(pid) { _cmpStack = _cmpStack.filter(p => p !== String(pid)); _cmpSave(); _cmpRender(); },
   clear() { _cmpStack = []; _cmpSave(); _cmpRender(); },
-  hide() { const host = document.getElementById('compare-scout-panel'); if (host) { host.classList.remove('open'); host.setAttribute('aria-hidden', 'true'); } },
+  hide() { const host = document.getElementById('compare-scout-panel'); if (host) { host.classList.remove('open'); host.setAttribute('aria-hidden', 'true'); } document.body.style.overflow = ''; },
   _search(q) {
     const out = document.getElementById('cmp-results'); if (!out) return;
     const term = (q || '').trim().toLowerCase();
@@ -124,7 +130,7 @@ const CompareScout = {
     const dv = window.dynastyValue || window.App?.dynastyValue || (() => 0);
     const matches = Object.entries(S.players || {})
       .filter(([pid, p]) => { if (_cmpStack.includes(pid)) return false; const nm = (p.full_name || ((p.first_name || '') + ' ' + (p.last_name || ''))).toLowerCase(); return nm.includes(term) && (p.position || p.fantasy_positions); })
-      .map(([pid, p]) => ({ pid, name: p.full_name || pid, pos: normPos(p.position || ''), team: p.team || 'FA', dhq: dv(pid) || 0 }))
+      .map(([pid, p]) => ({ pid, name: p.full_name || ((p.first_name || '') + ' ' + (p.last_name || '')).trim() || (window.pName ? window.pName(pid) : pid), pos: normPos(p.position || ''), team: p.team || 'FA', dhq: dv(pid) || 0 }))
       .sort((a, b) => b.dhq - a.dhq).slice(0, 8);
     out.innerHTML = matches.map(m => `<button class="cmp-result" onclick="window.CompareScout.add('${m.pid}')">${_cmpEsc(m.name)} <span>${_cmpEsc(m.pos)} · ${_cmpEsc(m.team)}${m.dhq > 0 ? ' · ' + m.dhq.toLocaleString() : ''}</span></button>`).join('') || '<div class="cmp-noresult">No matches</div>';
   },
