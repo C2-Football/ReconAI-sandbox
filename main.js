@@ -64,6 +64,7 @@ import './js/history-scout.js';
 import './js/analytics-scout.js';
 import './js/tagged-sets.js';
 import './js/compare-scout.js';
+import './js/today-cards.js';
 import './js/pro-launch.js';
 import './js/tutorial.js';
 

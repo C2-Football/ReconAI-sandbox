@@ -1381,6 +1381,10 @@ function renderWarRoomBrief() {
       <div class="rail-chip"><span class="rail-kicker">Window</span><strong class="rail-big" style="font-size:1.05rem">${_esc((_briefGated ? null : assessment?.window) || assessment?.tier || '—')}</strong><em class="rail-detail">${_briefGated ? 'tier read' : 'strategic window'}</em></div>
       <div class="rail-chip"><span class="rail-kicker">Activity</span><strong class="rail-big">${_railTxn}</strong><em class="rail-detail">recent moves</em></div>
     </section>` : '';
+  // Adaptive instrument panel — situation-selected KPI cards (today-cards.js).
+  const _adaptiveHtml = (roster && window.TodayCards)
+    ? (window.TodayCards.renderPanel(window.TodayCards.buildCtx(S, roster, league, phase, assessment)) || '')
+    : '';
   const _wcAll = _whatChanged ? _whatChanged.changes : [];
   const _wcChanges = _briefGated ? _wcAll.slice(0, 1) : _wcAll;
   const _whatChangedHtml = _wcChanges.length ? `<section class="scout-brief-section">
@@ -1452,6 +1456,8 @@ function renderWarRoomBrief() {
     </section>
 
     ${_railHtml}
+
+    ${_adaptiveHtml}
 
     ${_whatChangedHtml}
 

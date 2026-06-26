@@ -832,3 +832,6 @@ function renderAnalyticsPanel() {
   </div>`;
 }
 window.renderAnalyticsPanel = renderAnalyticsPanel;
+// Exposed for the adaptive Today instrument panel (js/today-cards.js).
+window.computeWindowForecast = computeWindowForecast;
+window._anCalcPosGrades = _anCalcPosGrades;

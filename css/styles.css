@@ -2738,6 +2738,16 @@ input,textarea,select,[contenteditable="true"]{
 .rail-big small{font-size:.7em;color:var(--text3);font-weight:600}
 .rail-detail{display:block;color:var(--text3);font-style:normal;font-size:.66rem;margin-top:3px}
 .rail-chip{border:1px solid var(--border2);background:var(--bg2);border-radius:10px;padding:11px 13px}
+/* Adaptive Today instrument panel (today-cards.js) */
+.scout-adaptive-rail{display:flex;flex-direction:column;gap:10px;margin:14px 0}
+.scout-adaptive-card{border:1px solid var(--border);background:var(--bg2);border-radius:14px;padding:13px 15px;min-width:0}
+.scout-adaptive-card .scout-kicker{display:block;margin-bottom:3px}
+.scout-adaptive-card h3{font-size:16px;font-weight:900;letter-spacing:-.02em;color:var(--text);margin:0 0 8px;line-height:1.15}
+.scout-adaptive-card .sac-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 0;font-size:13px;border-top:1px solid var(--border)}
+.scout-adaptive-card .sac-row:first-of-type{border-top:0}
+.scout-adaptive-card .sac-row span{color:var(--text3);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scout-adaptive-card .sac-row strong{font-weight:700;color:var(--text2);font-family:'JetBrains Mono',monospace;white-space:nowrap}
+@media(min-width:900px){.scout-adaptive-rail{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}}
 
 /* ══════════════════════════════════════════════════════════════════
    iPad / large-screen LANDSCAPE (≥1024px): persistent left nav rail +
