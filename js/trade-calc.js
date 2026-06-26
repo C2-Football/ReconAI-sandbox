@@ -2552,6 +2552,27 @@ function _finderToggleMoonshots() {
 }
 window._finderToggleMoonshots = _finderToggleMoonshots;
 
+// Roster-fit scoring — does the deal fill MY needs / cash in MY surplus?
+// Adds .fit (rank signal), .fillsNeed, .fromSurplus, .reason to a trade.
+function _finderScoreFit(t, myAssess) {
+  const np = window.App?.normPos || (p => p);
+  const needPos = new Set((myAssess?.needs || []).map(n => typeof n === 'string' ? n : n.pos).filter(Boolean));
+  const strengths = new Set(myAssess?.strengths || []);
+  const recvPos = (t.receive || []).map(p => np(pPos(p.pid)));
+  const givePos = (t.give || []).map(p => np(pPos(p.pid)));
+  const fillsNeed = recvPos.find(p => needPos.has(p)) || null;
+  const fromSurplus = givePos.find(p => strengths.has(p)) || null;
+  t.fillsNeed = fillsNeed;
+  t.fromSurplus = fromSurplus;
+  // Blend: need-fill dominates, surplus-use next, acceptance as a tie-breaker.
+  t.fit = (fillsNeed ? 60 : 0) + (fromSurplus ? 25 : 0) + (t.likelihood || 0) * 0.3;
+  t.reason = (fillsNeed && fromSurplus) ? `Moves your ${fromSurplus} surplus for a ${fillsNeed} need.`
+    : fillsNeed ? `Fills your ${fillsNeed} need.`
+      : fromSurplus ? `Cashes in your ${fromSurplus} depth.`
+        : (t.diff > 0 ? 'Slight value in your favor.' : 'Fair-value swap.');
+  return t;
+}
+
 function _finderGenerate(pid) {
   const val = dynastyValue(pid);
   if (!val) { _finderResults = []; _finderRefresh(); return; }
@@ -2620,7 +2641,8 @@ function _finderGenerate(pid) {
         }
       });
 
-      trades.sort((b,c) => c.likelihood - b.likelihood);
+      trades.forEach(t => _finderScoreFit(t, myAssess));
+      trades.sort((b,c) => c.fit - b.fit);
       if (trades.length) results.push({ assessment: a, dnaKey, trades }); // all viable trades per team, sorted by likelihood
     });
   } else {
@@ -2682,14 +2704,15 @@ function _finderGenerate(pid) {
       }
     });
 
-    trades.sort((b,c) => c.likelihood - b.likelihood);
-    if (trades.length) results.push({ assessment: theirAssess, dnaKey, trades }); // all viable offers, sorted by likelihood
+    trades.forEach(t => _finderScoreFit(t, myAssess));
+    trades.sort((b,c) => c.fit - b.fit);
+    if (trades.length) results.push({ assessment: theirAssess, dnaKey, trades }); // all viable offers, sorted by roster fit
   }
 
-  // Sort teams by best likelihood — return every team with at least one viable trade
+  // Sort teams by best roster-fit — return every team with at least one viable trade
   results.sort((a,b) => {
-    const aMax = Math.max(...a.trades.map(t => t.likelihood));
-    const bMax = Math.max(...b.trades.map(t => t.likelihood));
+    const aMax = Math.max(...a.trades.map(t => t.fit || 0));
+    const bMax = Math.max(...b.trades.map(t => t.fit || 0));
     return bMax - aMax;
   });
   _finderResults = results;
@@ -2844,8 +2867,8 @@ function renderTradeFinder(container) {
 
         html += `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px;margin-bottom:6px">`;
         html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">`;
-        html += `<span style="font-size:13px;color:var(--accent);font-weight:700;text-transform:uppercase">${t.type}</span>`;
-        html += `<div style="display:flex;gap:8px;align-items:center">`;
+        html += `<div style="display:flex;align-items:center;gap:6px;min-width:0"><span style="font-size:13px;color:var(--accent);font-weight:700;text-transform:uppercase">${t.type}</span>${t.fillsNeed ? `<span style="font-size:11px;font-weight:700;color:var(--green);background:rgba(52,211,153,.12);padding:1px 7px;border-radius:4px;white-space:nowrap">FILLS ${t.fillsNeed}</span>` : ''}</div>`;
+        html += `<div style="display:flex;gap:8px;align-items:center;flex-shrink:0">`;
         html += `<span style="font-size:13px;color:${diffCol}">${diffLabel} DHQ</span>`;
         html += `<span style="font-size:13px;font-weight:800;color:${lklCol};background:${lklCol}15;padding:2px 8px;border-radius:4px">${Math.round(t.likelihood)}%</span>`;
         html += `</div></div>`;
@@ -2863,6 +2886,7 @@ function renderTradeFinder(container) {
         t.receive.forEach(p => html += `<div style="font-size:13px;font-weight:600">${pName(p.pid)} <span style="color:var(--text3);font-size:13px">${pPos(p.pid)} ${p.val.toLocaleString()}</span></div>`);
         t.receivePicks.forEach(pk => html += `<div style="font-size:13px;color:var(--accent);font-weight:600">${pk.year} R${pk.round} <span style="color:var(--text3);font-size:13px">${(pk.val||0).toLocaleString()}</span></div>`);
         html += `</div></div>
+          ${t.reason ? `<div style="font-size:13px;color:var(--text3);margin-top:7px">${t.reason}</div>` : ''}
           <div class="tc-deal-actions">
             <button onclick="_tcLoadFinderDeal(${r.assessment.rosterId},${tradeIndex})">Load Builder</button>
             <button onclick="_tcSaveFinderDeal(${r.assessment.rosterId},${tradeIndex})">Save</button>
