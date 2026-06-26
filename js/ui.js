@@ -278,6 +278,80 @@ function _reconVerdict(pid){
   return v;
 }
 
+// ── Roster grouping + inline row expansion ─────────────────────────
+let _rosterGroup='slot'; // slot | pos | verdict
+let _rosterExpanded=null;
+const _rosterGroupCycle=[{key:'slot',label:'Slot'},{key:'pos',label:'Position'},{key:'verdict',label:'Verdict'}];
+let _rosterGroupIdx=0;
+function cycleRosterGroup(){
+  _rosterGroupIdx=(_rosterGroupIdx+1)%_rosterGroupCycle.length;
+  _rosterGroup=_rosterGroupCycle[_rosterGroupIdx].key;
+  document.querySelectorAll('.js-roster-group').forEach(b=>{b.textContent='Group: '+_rosterGroupCycle[_rosterGroupIdx].label;});
+  buildRosterTable();
+}
+function rosterGroupLabel(){return _rosterGroupCycle[_rosterGroupIdx].label;}
+window.cycleRosterGroup=cycleRosterGroup;
+window.rosterGroupLabel=rosterGroupLabel;
+function _rosterVerdictBucket(pid){
+  const v=_reconVerdict(pid);const a=(v&&v.action)||'';
+  if(['BUY','CORE','BUILD'].includes(a))return{key:'build',label:'Build / Buy',rank:0};
+  if(['SELL','SELL_HIGH'].includes(a))return{key:'sell',label:'Sell',rank:2};
+  if(a==='STASH')return{key:'stash',label:'Stash',rank:3};
+  return{key:'hold',label:'Hold',rank:1};
+}
+function _rosterGroupInfo(r){
+  if(_rosterGroup==='pos'){const order=['QB','RB','WR','TE','DL','LB','DB','K','DEF'];const i=order.indexOf(r.pos);return{key:r.pos,label:r.pos,rank:i<0?99:i};}
+  if(_rosterGroup==='verdict')return _rosterVerdictBucket(r.pid);
+  if(r.isReserve)return{key:'ir',label:'IR / Reserve',rank:2};
+  if(r.isTaxi)return{key:'taxi',label:'Taxi Squad',rank:3};
+  if(r.isStarter)return{key:'starters',label:'Starters',rank:0};
+  return{key:'bench',label:'Bench',rank:1};
+}
+function _rosterTag(pid,tag){
+  const lid=S.currentLeagueId||'';
+  const tags={...(window._playerTags||{})};
+  if(tags[pid]===tag)delete tags[pid];else tags[pid]=tag;
+  window._playerTags=tags;
+  try{localStorage.setItem('player_tags_'+lid,JSON.stringify(tags));}catch(e){/* ignore */}
+  if(window.OD&&window.OD.savePlayerTags)window.OD.savePlayerTags(lid,tags);
+  buildRosterTable();
+}
+window._rosterTag=_rosterTag;
+function _rosterToggle(pid){_rosterExpanded=_rosterExpanded===pid?null:pid;buildRosterTable();}
+window._rosterToggle=_rosterToggle;
+function _rosterReadLine(r){
+  const tierLabel=(typeof tradeValueTier==='function'?(tradeValueTier(r.val).tier||''):'')||'Rostered';
+  const meta=LI_LOADED?LI.playerMeta?.[r.pid]:null;
+  const trend=meta?.trend||0;
+  const trendWord=trend>=15?' and trending up':trend<=-15?' and slipping':'';
+  const prod=r.avg>0?`Averaging ${r.avg.toFixed(1)} ppg`:(r.prev>0?`Put up ${r.prev.toFixed(1)} ppg last season`:'Thin recent production');
+  return `${tierLabel} at ${r.pos}${r.val>0?' ('+r.val.toLocaleString()+' DHQ'+trendWord+')':''}. ${prod}. ${r.pk.label}${r.pk.desc?' — '+r.pk.desc:''}.`;
+}
+function _rosterExpansion(r){
+  const phaseCol=r.pk.cls==='peak'||r.pk.cls==='rising'?'var(--green)':r.pk.cls==='seedling'?'var(--blue)':r.pk.cls==='veteran'?'var(--amber)':'var(--red)';
+  const sig=(label,val,col)=>`<div class="rr-sig"><span>${label}</span><strong${col?` style="color:${col}"`:''}>${val}</strong></div>`;
+  const signals=[
+    sig('Phase',r.pk.label+(r.pk.desc?' · '+r.pk.desc:''),phaseCol),
+    r.wk!=null?sig('This wk',r.wk.toFixed(1)+(r.wkLo!=null&&r.wkHi!=null?` (${r.wkLo.toFixed(0)}–${r.wkHi.toFixed(0)})`:'')):'',
+    r.avg>0?sig('PPG',r.avg.toFixed(1)):'',
+    r.prev>0?sig('Prev yr',r.prev.toFixed(1)):'',
+    r.val>0?sig('DHQ',r.val.toLocaleString(),'var(--accent)'):'',
+  ].filter(Boolean).join('');
+  const tag=window._playerTags?.[r.pid]||'';
+  const tBtn=(k,l)=>`<button class="rr-x-tag${tag===k?' active':''}" onclick="event.stopPropagation();_rosterTag('${r.pid}','${k}')">${l}</button>`;
+  const nm=(r.name||'').replace(/'/g,"\\'");
+  return `<div class="rr-expand">
+    <div class="rr-read">${_rosterReadLine(r)}</div>
+    <div class="rr-sigs">${signals}</div>
+    <div class="rr-x-tags">${tBtn('untouchable','Untouchable')}${tBtn('trade','Shop')}${tBtn('watch','Watch')}${tBtn('cut','Cut')}</div>
+    <div class="rr-x-actions">
+      <button class="btn btn-sm" onclick="event.stopPropagation();fillGlobalChat('Give me the full read on ${nm} (${r.pos}) — role, outlook, and whether to buy, hold, or sell.')">Ask Scout</button>
+      <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openTradeBuilderForPlayer('${r.pid}')">Trade</button>
+      <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openPlayerModal('${r.pid}')">Details</button>
+    </div>
+  </div>`;
+}
+
 window.buildRosterTable=()=>buildRosterTable();
 function buildRosterTable(){
   const my=myR();if(!my){
@@ -305,14 +379,14 @@ function buildRosterTable(){
     const stats=S.playerStats?.[pid]||{};
     const val=dynastyValue(pid);
     const pk=peakYears(pid);
-    let wk=null;
-    if(_WP&&['QB','RB','WR','TE'].includes(pPos(pid))){try{const _pr=_WP.projectPlayer(pid,{playersData:S.players,statsData:_wkStats,priorData:_wkPrior,scoring:_wkScoring,week:_wkWeek});if(_pr&&_pr.points&&_pr.available!==false)wk=+_pr.points.median||null;}catch(e){/* omit on failure */}}
+    let wk=null,wkLo=null,wkHi=null;
+    if(_WP&&['QB','RB','WR','TE'].includes(pPos(pid))){try{const _pr=_WP.projectPlayer(pid,{playersData:S.players,statsData:_wkStats,priorData:_wkPrior,scoring:_wkScoring,week:_wkWeek});if(_pr&&_pr.points&&_pr.available!==false){wk=+_pr.points.median||null;if(_pr.points.floor!=null)wkLo=+_pr.points.floor;if(_pr.points.ceiling!=null)wkHi=+_pr.points.ceiling;}}catch(e){/* omit on failure */}}
     const slotIdx=[...starters].indexOf(pid);
     const isTaxi=taxi.has(pid);
     const isRes=reserve.has(pid);
     const slot=slotIdx>=0?(positions[slotIdx]||'FLEX'):isRes?'IR':isTaxi?'Taxi':pPos(pid)||'BN';
     return{
-      pid,p,stats,val,pk,slot,wk,
+      pid,p,stats,val,pk,slot,wk,wkLo,wkHi,
       isStarter:starters.has(pid),isReserve:isRes,isTaxi,
       pos:pPos(pid)||'?',name:pName(pid),
       age:p.age||99,value:val,
@@ -325,11 +399,11 @@ function buildRosterTable(){
   if(rosterFilter==='taxi')rows=rows.filter(r=>r.isTaxi);
 
   const posOrder2=['QB','RB','WR','TE','DL','LB','DB','K','DEF'];
+  // Group (Slot/Position/Verdict), then sort within each group by the active key.
+  rows.forEach(r=>{r._g=_rosterGroupInfo(r);});
   rows.sort((a,b)=>{
-    if(rosterFilter!=='taxi'){
-      const sec=r=>r.isReserve?2:r.isTaxi?2:0;
-      const sd=sec(a)-sec(b);if(sd!==0)return sd;
-    }
+    const gr=a._g.rank-b._g.rank;if(gr!==0)return gr;
+    if(a._g.key!==b._g.key)return a._g.label<b._g.label?-1:1;
     let av=a[rosterSortKey]??'',bv=b[rosterSortKey]??'';
     if(rosterSortKey==='name'){av=av.toLowerCase();bv=bv.toLowerCase();}
     if(rosterSortKey==='pos'){av=posOrder2.indexOf(av)<0?99:posOrder2.indexOf(av);bv=posOrder2.indexOf(bv)<0?99:posOrder2.indexOf(bv);}
@@ -347,16 +421,15 @@ function buildRosterTable(){
   let html=`<div class="roster-header-sticky" style="display:flex;align-items:center;gap:8px;padding:4px 14px 6px;font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;opacity:.6">
     <span style="min-width:36px"></span><span style="flex:1">Player</span><span style="min-width:54px;text-align:right">DHQ</span><span style="min-width:44px;text-align:right">PPG</span><span style="min-width:42px;text-align:right">Phase</span>
   </div>`;
-  let lastSection='';
+  let lastGroup='';
 
   rows.forEach(r=>{
     const {pid,p,stats,val,pk,isStarter,isReserve,isTaxi,pos,age,wk}=r;
 
-    // Section headers
-    const section=(r.isReserve||r.isTaxi)?(r.isReserve?'IR / Reserve':'Taxi Squad'):'';
-    if(section&&section!==lastSection){
-      html+=`<div class="rr-section-hdr">${section}</div>`;
-      lastSection=section;
+    // Group divider (Slot / Position / Verdict)
+    if(r._g.key!==lastGroup){
+      html+=`<div class="rr-section-hdr">${r._g.label}</div>`;
+      lastGroup=r._g.key;
     }
 
     const {col}=tradeValueTier(val);
@@ -376,7 +449,8 @@ function buildRosterTable(){
     const playerTag=window._playerTags?.[pid];
     const tagHtml=playerTag?'<span style="font-size:11px;padding:1px 5px;border-radius:4px;font-weight:700;background:'+(playerTag==='trade'?'var(--amberL)':playerTag==='cut'?'var(--redL)':playerTag==='untouchable'?'var(--greenL)':'var(--blueL)')+';color:'+(playerTag==='trade'?'var(--amber)':playerTag==='cut'?'var(--red)':playerTag==='untouchable'?'var(--green)':'var(--blue)')+'">'+( playerTag==='trade'?'TB':playerTag==='cut'?'CUT':playerTag==='untouchable'?'UT':'W')+'</span>':'';
 
-    html+=`<div class="${cardCls}" onclick="openPlayerModal('${pid}')">
+    const _expanded=_rosterExpanded===pid;
+    html+=`<div class="${cardCls}${_expanded?' rr-expanded':''}" onclick="_rosterToggle('${pid}')">
       <img class="rr-photo" src="https://sleepercdn.com/content/nfl/players/${pid}.jpg" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<span class=rr-initials>${initials}</span>')" loading="lazy"/>
       <div style="flex:1;min-width:0;overflow:hidden">
         <div style="display:flex;align-items:center;gap:6px">
@@ -397,6 +471,7 @@ function buildRosterTable(){
       </div>
       <div class="rr-chevron"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
     </div>`;
+    if(_expanded)html+=_rosterExpansion(r);
   });
 
   wrap.innerHTML=html||'<div style="padding:20px;text-align:center;color:var(--text3)">No players found.</div>';

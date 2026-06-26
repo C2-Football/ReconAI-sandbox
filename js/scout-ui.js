@@ -1642,6 +1642,7 @@ function renderTeamCommandPanel() {
   // Inline roster control-bar state (mirrors the shared renderer in ui.js).
   const _curRosterFilter = typeof window.getRosterFilter === 'function' ? window.getRosterFilter() : 'all';
   const _curRosterSortLabel = typeof window.rosterSortLabel === 'function' ? window.rosterSortLabel() : 'Value ↓';
+  const _curRosterGroupLabel = typeof window.rosterGroupLabel === 'function' ? window.rosterGroupLabel() : 'Slot';
 
   host.innerHTML = `<div class="scout-command-shell">
     <section class="scout-hero scout-team-hero">
@@ -1663,7 +1664,7 @@ function renderTeamCommandPanel() {
       </div>
     </section>
 
-    <section class="scout-metric-grid">
+    <section class="scout-metric-grid scout-metric-strip">
       <div class="scout-metric-card"><span>Roster DHQ</span><strong>${hasValueData ? Math.round(totalValue).toLocaleString() : 'Syncing'}</strong><small>${hasValueData && rank.rank ? `#${rank.rank}/${rank.total} ${rank.basis}` : 'DHQ cache warming up'}</small></div>
       <div class="scout-metric-card"><span>Draft Bank</span><strong>${Math.round(pickValueTotal).toLocaleString()}</strong><small>${picks.length} picks in next 3 years</small></div>
       <div class="scout-metric-card"><span>FAAB</span><strong>${faab.isFAAB ? '$' + faab.remaining : 'Priority'}</strong><small>${faab.isFAAB ? '$' + faab.budget + ' budget' : '#' + (roster.settings?.waiver_position || '?') + ' waiver claim'}</small></div>
@@ -1697,6 +1698,7 @@ function renderTeamCommandPanel() {
         ${[['all', 'All'], ['OFF', 'Offense'], ['IDP', 'IDP'], ['taxi', 'Taxi']].map(([k, l]) =>
           `<button class="rfbtn${_curRosterFilter === k ? ' active' : ''}" onclick="setRosterFilter('${k}',this)">${l}</button>`).join('')}
       </div>
+      <button class="rfbtn js-roster-group" onclick="cycleRosterGroup()">Group: ${_esc(_curRosterGroupLabel)}</button>
       <button class="rfbtn js-roster-sort" onclick="cycleRosterSort()">Sort: ${_esc(_curRosterSortLabel)}</button>
     </div>
     <div id="team-roster-host" class="scout-roster-host"></div>
