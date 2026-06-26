@@ -1632,7 +1632,21 @@ function renderTradeBuilder(myRosterId, theirRosterId, container) {
         const league = S.leagues?.find(l => l.league_id === S.currentLeagueId);
         const nflStarterSet = buildNflStarterSetFromGlobal();
         const picksByOwner = window.App.buildPicksByOwner(S.rosters, league, S.tradedPicks);
-        const simAssess = assessTeam(simRoster, S.players, S.playerStats, league, S.leagueUsers, nflStarterSet, picksByOwner[myRosterId] || []);
+        // NOTE: bare `assessTeam` (and window.App.assessTeam) resolve to trade-calc's
+        // local 4-arg copy, which shadows the shared engine — calling it with the
+        // data-first signature below threw (ownerPicks landed on S.playerStats →
+        // "myPicks is not iterable") and the whole builder render aborted, so Load
+        // Builder showed nothing. Use the shared engine alias so the simulated "after"
+        // matches the assessTeamFromGlobal "before" baseline (also shared). Pass only
+        // weeklyTarget — the league-median target drives healthScore, so before/after
+        // must share it; the shared engine derives idealRoster/pos-weights itself,
+        // identically to the baseline.
+        const rosterPositions = league?.roster_positions || [];
+        const allPPGs = (S.rosters || [])
+          .map(r => window.calcOptimalPPGShared(r.players || [], S.players, S.playerStats, rosterPositions))
+          .filter(v => v > 0);
+        const weeklyTarget = allPPGs.length ? allPPGs.sort((a, b) => a - b)[Math.floor(allPPGs.length / 2)] * 1.05 : 150;
+        const simAssess = window.assessTeamShared(simRoster, S.players, S.playerStats, league, S.leagueUsers, nflStarterSet, picksByOwner[myRosterId] || [], S.rosters, { weeklyTarget });
 
         if (simAssess) {
           const hsDelta = simAssess.healthScore - myAssessNow.healthScore;
