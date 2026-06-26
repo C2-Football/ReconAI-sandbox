@@ -1627,7 +1627,6 @@ function renderTeamCommandPanel() {
   const pickValueTotal = picks.reduce((sum, pk) => sum + (pk.value || 0), 0);
   const faab = _scoutFaab(roster);
   const needs = (assessment?.needs || []).map(n => typeof n === 'string' ? n : n.pos).filter(Boolean);
-  const strengths = assessment?.strengths || [];
   const rooms = _scoutRosterRooms(roster, assessment);
   const topRooms = rooms.slice().sort((a, b) => hasValueData ? ((b.value || 0) - (a.value || 0)) : ((b.count || 0) - (a.count || 0))).slice(0, 3).map(r => r.pos).join(', ') || '—';
   const weakRooms = needs.slice(0, 3).join(', ') || rooms.filter(r => r.status === 'thin' || r.status === 'deficit').slice(0, 3).map(r => r.pos).join(', ') || 'none';
@@ -1640,26 +1639,9 @@ function renderTeamCommandPanel() {
   // Light depth gate: free sees the generic tier; paid sees the strategic window timeline.
   const _teamGated = typeof canAccess === 'function' && !canAccess(window.FEATURES?.BRIEFING_REASONING || 'briefing_reasoning');
 
-  const actionRows = [
-    {
-      label: weakRooms && weakRooms !== 'none' ? `Fix ${weakRooms}` : 'Stress-test roster',
-      meta: 'Ask Scout to rank the moves that change your title path.',
-      action: `fillGlobalChat('Audit my roster and tell me the 3 highest leverage moves. Weak rooms: ${weakRooms}.')`,
-      cta: 'Ask'
-    },
-    {
-      label: strengths.length ? `Convert ${strengths.slice(0, 2).join(', ')} surplus` : 'Find a trade partner',
-      meta: 'Turn surplus into starters, picks, or future leverage.',
-      action: "mobileTab('trades')",
-      cta: 'Trade'
-    },
-    {
-      label: 'Open full roster board',
-      meta: 'Keep the granular player-by-player view one tap away.',
-      action: "mobileTab('roster')",
-      cta: 'Board'
-    }
-  ];
+  // Inline roster control-bar state (mirrors the shared renderer in ui.js).
+  const _curRosterFilter = typeof window.getRosterFilter === 'function' ? window.getRosterFilter() : 'all';
+  const _curRosterSortLabel = typeof window.rosterSortLabel === 'function' ? window.rosterSortLabel() : 'Value ↓';
 
   host.innerHTML = `<div class="scout-command-shell">
     <section class="scout-hero scout-team-hero">
@@ -1688,11 +1670,13 @@ function renderTeamCommandPanel() {
       <div class="scout-metric-card"><span>Window</span><strong>${_esc((_teamGated ? null : assessment?.window) || tier)}</strong><small>${needs.length ? `Need ${needs.slice(0, 2).join(', ')}` : 'No major gaps'}</small></div>
     </section>
 
-    <section class="scout-section-card">
-      <div class="scout-section-head">
-        <div><span class="scout-kicker">Roster Rooms</span><h2>Where your team is built or exposed</h2></div>
-        <button class="scout-secondary-btn" onclick="mobileTab('roster')">Full Board</button>
-      </div>
+    <details class="scout-section-card scout-rooms-card">
+      <summary class="scout-rooms-summary">
+        <div class="scout-rooms-head"><span class="scout-kicker">Roster Rooms</span>
+          <span class="scout-rooms-tags">${hasValueData && topRooms !== '—' ? `<b class="is-strong">Strong</b> ${_esc(topRooms)}` : 'Depth by room'}${weakRooms && weakRooms !== 'none' ? ` · <b class="is-thin">Thin</b> ${_esc(weakRooms)}` : ''}</span>
+        </div>
+        <span class="scout-rooms-caret" aria-hidden="true">▾</span>
+      </summary>
       <div class="scout-room-grid">
         ${rooms.map(room => {
           const tone = _scoutStatusTone(room.status);
@@ -1706,20 +1690,21 @@ function renderTeamCommandPanel() {
           </button>`;
         }).join('')}
       </div>
-    </section>
+    </details>
 
-    <section class="scout-section-card">
-      <div class="scout-section-head">
-        <div><span class="scout-kicker">Next Moves</span><h2>Actions that preserve depth</h2></div>
+    <div class="scout-roster-bar">
+      <div class="rfbtn-row" id="team-roster-filters">
+        ${[['all', 'All'], ['OFF', 'Offense'], ['IDP', 'IDP'], ['taxi', 'Taxi']].map(([k, l]) =>
+          `<button class="rfbtn${_curRosterFilter === k ? ' active' : ''}" onclick="setRosterFilter('${k}',this)">${l}</button>`).join('')}
       </div>
-      <div class="scout-action-list">
-        ${actionRows.map(row => `<button class="scout-action-row" onclick="${row.action}">
-          <span><strong>${_esc(row.label)}</strong><small>${_esc(row.meta)}</small></span>
-          <em>${_esc(row.cta)}</em>
-        </button>`).join('')}
-      </div>
-    </section>
+      <button class="rfbtn js-roster-sort" onclick="cycleRosterSort()">Sort: ${_esc(_curRosterSortLabel)}</button>
+    </div>
+    <div id="team-roster-host" class="scout-roster-host"></div>
   </div>`;
+
+  // Mount the shared roster-card renderer inline (the roster is the page now).
+  if (typeof window.setRosterHost === 'function') window.setRosterHost('team-roster-host');
+  if (typeof window.buildRosterTable === 'function') window.buildRosterTable();
 }
 window.renderTeamCommandPanel = renderTeamCommandPanel;
 

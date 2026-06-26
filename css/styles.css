@@ -1900,6 +1900,24 @@ h1,h2,h3,
 .scout-action-row strong{display:block;font-size:14px;font-weight:850;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .scout-action-row small{display:block;font-size:12px;color:var(--text3);line-height:1.35;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .scout-action-row em{flex-shrink:0;font-style:normal;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);padding:5px 8px;border-radius:999px;background:var(--accentL);border:1px solid rgba(212,175,55,.2)}
+/* My Team revamp — collapsible rooms, sticky roster control bar, inline roster */
+.scout-rooms-card{padding:0;overflow:hidden}
+.scout-rooms-summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px;cursor:pointer;list-style:none}
+.scout-rooms-summary::-webkit-details-marker{display:none}
+.scout-rooms-head{min-width:0;display:flex;flex-direction:column;gap:3px}
+.scout-rooms-tags{font-size:12px;color:var(--text3);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scout-rooms-tags b{font-weight:800;font-style:normal}
+.scout-rooms-tags b.is-strong{color:var(--green)}
+.scout-rooms-tags b.is-thin{color:var(--amber)}
+.scout-rooms-caret{flex-shrink:0;color:var(--text3);font-size:13px;transition:transform .2s}
+.scout-rooms-card[open] .scout-rooms-caret{transform:rotate(180deg)}
+.scout-rooms-card .scout-room-grid{padding:0 14px 14px}
+.scout-roster-bar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:8px;padding:10px 0;margin-bottom:2px;background:var(--bg);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.scout-roster-bar .rfbtn-row{display:flex;gap:6px;flex:1;min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.scout-roster-bar .rfbtn-row::-webkit-scrollbar{display:none}
+.scout-roster-bar .rfbtn{flex-shrink:0;padding:7px 13px}
+.scout-roster-bar .js-roster-sort{flex-shrink:0}
+.scout-roster-host{min-height:140px}
 .scout-tool-grid{display:grid;grid-template-columns:1fr;gap:10px}
 .scout-tool-card{position:relative;overflow:hidden;text-align:left;min-height:132px;padding:16px;border-radius:16px;border:1px solid var(--border);background:var(--bg2);color:var(--text);cursor:pointer;font-family:inherit}
 .scout-tool-card::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 82% 14%,rgba(212,175,55,.16),transparent 32%);opacity:.9;pointer-events:none}

@@ -198,6 +198,7 @@ function getDcLabel(pid){
 
 async function renderRoster(){
   const my=myR();if(!my)return;
+  setRosterHost('roster-tbody');
   buildRosterTable();
 }
 
@@ -228,6 +229,12 @@ function valueWindowEnd(pos){
 
 // Roster sort/filter
 let rosterSortKey='value', rosterSortDir=-1, rosterFilter='all';
+// Render target for buildRosterTable — lets the same renderer mount on the
+// standalone roster tab ('roster-tbody') or inline under My Team ('team-roster-host').
+let _rosterHost='roster-tbody';
+function setRosterHost(id){_rosterHost=id||'roster-tbody';}
+window.setRosterHost=setRosterHost;
+window.getRosterFilter=()=>rosterFilter;
 const _rosterSortCycle=[
   {key:'value',dir:-1,label:'Value ↓'},
   {key:'pos',dir:1,label:'Position'},
@@ -243,15 +250,21 @@ function cycleRosterSort(){
   rosterSortKey=s.key;rosterSortDir=s.dir;
   const btn=$('roster-sort-btn');
   if(btn)btn.textContent='Sort: '+s.label;
+  document.querySelectorAll('.js-roster-sort').forEach(b=>{b.textContent='Sort: '+s.label;});
   buildRosterTable();
 }
+function rosterSortLabel(){return _rosterSortCycle[_rosterSortIdx].label;}
+window.rosterSortLabel=rosterSortLabel;
 function sortRoster(key){
   if(rosterSortKey===key)rosterSortDir*=-1;else{rosterSortKey=key;rosterSortDir=-1;}
   buildRosterTable();
 }
 function setRosterFilter(f, btn){
   rosterFilter=f;
-  document.querySelectorAll('#roster-filter-btns .rfbtn').forEach(b=>b.classList.remove('active'));
+  // Clear active state within the clicked button's own row so this works on
+  // both the standalone roster tab and the inline My Team control bar.
+  const scope=btn?btn.parentElement:document.getElementById('roster-filter-btns');
+  if(scope)scope.querySelectorAll('.rfbtn').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
   buildRosterTable();
 }
@@ -265,9 +278,10 @@ function _reconVerdict(pid){
   return v;
 }
 
+window.buildRosterTable=()=>buildRosterTable();
 function buildRosterTable(){
   const my=myR();if(!my){
-    $('roster-tbody').innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:14px">Connect to load roster.</div>';
+    const _h=$(_rosterHost);if(_h)_h.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:14px">Connect to load roster.</div>';
     return;
   }
   const league=S.leagues.find(l=>l.league_id===S.currentLeagueId);
@@ -328,7 +342,8 @@ function buildRosterTable(){
   const countEl=$('roster-count');
   if(countEl)countEl.textContent=rows.length+' player'+(rows.length!==1?'s':'');
 
-  const wrap=$('roster-tbody');
+  const wrap=$(_rosterHost);
+  if(!wrap)return;
   let html=`<div class="roster-header-sticky" style="display:flex;align-items:center;gap:8px;padding:4px 14px 6px;font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;opacity:.6">
     <span style="min-width:36px"></span><span style="flex:1">Player</span><span style="min-width:54px;text-align:right">DHQ</span><span style="min-width:44px;text-align:right">PPG</span><span style="min-width:42px;text-align:right">Phase</span>
   </div>`;
