@@ -1385,7 +1385,7 @@ function renderWarRoomBrief() {
   // adaptive cards — additive over the rules baseline, cleared+reset each render.
   if (window.TodayCards && window.TodayCards.setNudge) {
     try {
-      const _nudgeTxt = (priorities || []).map(p => typeof p === 'string' ? p : (p.label || p.text || p.title || ''))
+      const _nudgeTxt = (priorities || []).map(p => typeof p === 'string' ? p : [p.problem, p.actionLabel, p.consequence].filter(Boolean).join(' '))
         .concat(nextMove?.action ? [nextMove.action] : [])
         .concat(diagnosis?.line1 ? [diagnosis.line1] : []);
       window.TodayCards.setNudge(_nudgeTxt.map(t => window.TodayCards.matchCardKey(t)).filter(Boolean));

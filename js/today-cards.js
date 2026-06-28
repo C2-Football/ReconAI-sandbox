@@ -27,8 +27,26 @@ function _tcCard(opts) {
 }
 
 // ── Shared situation context — built once, every engine call guarded ──
+// Heavy engines (analytics / leverage / window / grades / picks) memoized by a
+// cheap state signature — the brief re-renders on tab switch AND a 15s poll, so
+// without this runLeagueAnalytics (O(rosters×players)) would recompute each time.
+let _tcHeavyCache = null, _tcHeavySig = '';
+function _tcHeavy(S, roster, league, myRid, assessment) {
+  const sig = [league?.league_id, myRid, (roster?.players || []).length, (S.rosters || []).length, Math.round(assessment?.healthScore || 0), Array.isArray(S.transactions) ? S.transactions.length : Object.keys(S.transactions || {}).length].join('|');
+  if (_tcHeavyCache && _tcHeavySig === sig) return _tcHeavyCache;
+  const h = {
+    analytics: _tcSafe(() => window.runLeagueAnalytics ? window.runLeagueAnalytics() : null),
+    leverage: _tcSafe(() => window.computeLeverageBoard ? window.computeLeverageBoard(myRid) : null),
+    windowForecast: _tcSafe(() => window.computeWindowForecast ? window.computeWindowForecast(myRid, S.rosters, S.players, league) : null),
+    posGrades: _tcSafe(() => window._anCalcPosGrades ? window._anCalcPosGrades(myRid, S.rosters, S.players) : null),
+    picksByOwner: _tcSafe(() => window.buildPicksByOwner ? window.buildPicksByOwner(S.rosters, league, S.tradedPicks) : null) || {},
+  };
+  _tcHeavyCache = h; _tcHeavySig = sig;
+  return h;
+}
 function _tcBuildCtx(S, roster, league, phase, assessment) {
   const myRid = roster ? roster.roster_id : null;
+  const _h = _tcHeavy(S, roster, league, myRid, assessment);
   const all = _tcSafe(() => window.assessAllTeamsFromGlobal()) || [];
   const ranked = [...all].sort((a, b) => (b.healthScore || 0) - (a.healthScore || 0));
   const rank = (myRid != null) ? (ranked.findIndex(a => a.rosterId === myRid) + 1) : 0;
@@ -47,12 +65,11 @@ function _tcBuildCtx(S, roster, league, phase, assessment) {
     panic: assessment?.panic || 0,
     window: assessment?.window || '',
     needs: (assessment?.needs || []).map(n => typeof n === 'string' ? n : n.pos).filter(Boolean),
-    windowForecast: _tcSafe(() => window.computeWindowForecast ? window.computeWindowForecast(myRid, S.rosters, S.players, league) : null),
-    posGrades: _tcSafe(() => window._anCalcPosGrades ? window._anCalcPosGrades(myRid, S.rosters, S.players) : null),
-    picksByOwner: _tcSafe(() => window.buildPicksByOwner ? window.buildPicksByOwner(S.rosters, league, S.tradedPicks) : null) || {},
-    // Heavier engines — computed once here, never inside a card's relevance().
-    analytics: _tcSafe(() => window.runLeagueAnalytics ? window.runLeagueAnalytics() : null),
-    leverage: _tcSafe(() => window.computeLeverageBoard ? window.computeLeverageBoard(myRid) : null),
+    windowForecast: _h.windowForecast,
+    posGrades: _h.posGrades,
+    picksByOwner: _h.picksByOwner,
+    analytics: _h.analytics,
+    leverage: _h.leverage,
     optimalLineup: (phaseStr === 'regular_season' || phaseStr === 'playoffs') ? _tcSafe(() => window._buildLineupState ? window._buildLineupState() : null) : null,
     tagCounts, tagTotal: tagCounts.trade + tagCounts.cut + tagCounts.watch + tagCounts.untouchable,
   };
@@ -188,11 +205,16 @@ const _TC_CATALOG = [
     render(ctx) {
       const gaps = ctx.analytics?.roster?.gaps || ctx.analytics?.gaps || [];
       const top = gaps[0]; if (!top) return '';
-      const area = top.area || top.label || top.pos || 'roster';
       const sev = String(top.priority || top.severity || 'medium');
       const sevCol = /crit/i.test(sev) ? 'var(--red)' : /high/i.test(sev) ? 'var(--amber)' : 'var(--text2)';
       const gapN = Math.abs(Number(top.dhqGap ?? top.delta ?? 0));
-      return _tcCard({ kicker: 'Gap Plan', title: 'Close the ' + area + ' gap', rows: [
+      // Position gaps carry .pos ("Close the WR gap"); roster-construction gaps
+      // (elite/starter/age/bench) carry a full .action sentence instead.
+      const title = top.pos ? ('Close the ' + top.pos + ' gap')
+        : top.action ? top.action
+          : top.area ? ('Close the ' + top.area + ' gap')
+            : (top.label || 'Close the biggest gap');
+      return _tcCard({ kicker: 'Gap Plan', title, rows: [
         { label: 'Behind champions', value: gapN ? Math.round(gapN).toLocaleString() + ' ' + (top.unit || 'DHQ') : '—' },
         { label: 'Priority', value: sev.toUpperCase(), color: sevCol },
       ] });
@@ -208,7 +230,8 @@ const _TC_CATALOG = [
     },
     render(ctx) {
       const proj = ctx.analytics?.projection || [], win = ctx.analytics?.window || {};
-      const contend = [...proj].reverse().find(p => /CONTEND|ELITE|PLAYOFF/i.test(p.tier || ''));
+      // FIRST projected contending year (not reversed → not the last).
+      const contend = proj.find(p => /CONTEND|ELITE|PLAYOFF/i.test(p.tier || ''));
       const title = contend ? ('Contends by ' + contend.year) : 'Multi-year rebuild';
       const peak = contend ? contend.tier : (proj[proj.length - 1]?.tier || '—');
       return _tcCard({ kicker: 'Rebuild Timeline', title, rows: [
@@ -261,7 +284,12 @@ let _tcNudge = new Set();
 function _tcSelect(ctx, n) {
   return _TC_CATALOG
     .filter(c => !(c.seasonOnly && !ctx.inSeason))
-    .map((c, i) => ({ c, i, score: (_tcSafe(() => c.relevance(ctx)) || 0) + (_tcNudge.has(c.key) ? 25 : 0) }))
+    .map((c, i) => {
+      const base = _tcSafe(() => c.relevance(ctx)) || 0;
+      // Nudge AMPLIFIES a relevant card (base > 0); it never resurrects a card
+      // the rules hid (base 0 — e.g. tagged-players with no tags).
+      return { c, i, score: base > 0 ? base + (_tcNudge.has(c.key) ? 25 : 0) : 0 };
+    })
     .filter(x => x.score >= 20)
     .sort((a, b) => (b.score - a.score) || ((a.c.tieClass || 5) - (b.c.tieClass || 5)) || (a.i - b.i))
     .slice(0, n)
@@ -281,16 +309,16 @@ function _tcRenderPanel(ctx) {
 // Chat-summon: map a user phrase to a card key so the chat can render any
 // catalog card inline ("show me my draft capital").
 const _TC_ALIASES = [
-  ['draft-capital', ['draft capital', 'my picks', 'pick capital', 'draft pick']],
-  ['leverage-board', ['leverage', 'who is buying', 'who is selling', 'buyers and sellers', 'trade partner']],
-  ['gap-plan', ['gap plan', 'my gaps', 'close the gap', 'behind champ', 'champion gap']],
+  ['draft-capital', ['draft capital', 'my picks', 'pick capital', 'draft pick', 'draft board', 'draft target', 'rookie draft', 'map your rookie']],
+  ['leverage-board', ['leverage', 'who is buying', 'who is selling', 'buyers and sellers', 'trade partner', 'win-now', 'teams are buying', 'aging asset', 'convert to pick']],
+  ['gap-plan', ['gap plan', 'my gaps', 'close the gap', 'behind champ', 'champion gap', 'rebuild gap', 'biggest gap', 'secondary gap', 'below league']],
   ['power-rankings', ['power rank', 'my rank', 'league rank', 'standings']],
-  ['coverage-grades', ['coverage', 'position grade', 'room grade', 'weakest room']],
+  ['coverage-grades', ['coverage', 'position grade', 'room grade', 'weakest room', 'group dhq is below']],
   ['window-cliff', ['window cliff', 'age window', 'my window', 'age cliff', 'contention window']],
   ['roster-pulse', ['roster pulse', 'team health', 'my health', 'roster health']],
   ['rebuild-timeline', ['rebuild timeline', 'when do i contend', 'rebuild window']],
   ['trade-performance', ['trade record', 'trade edge', 'my trade history', 'trade performance']],
-  ['tagged-players', ['my tags', 'tagged player', 'trade block', 'cut candidate', 'watch list']],
+  ['tagged-players', ['my tags', 'tagged player', 'trade block', 'cut candidate', 'watch list', 'untouchable']],
 ];
 function _tcMatchCardKey(text) {
   const t = (text || '').toLowerCase();
